@@ -317,3 +317,152 @@ fun InsightsSectionPreview() {
         InsightsSection(TradeInsights(350.75, -150.20, "ETH/USD"))
     }
 }
+
+@Composable
+fun RecentTradeCard(trade: RecentTradeItem) {
+    Card(
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = TradingViewDarkSurface),
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = trade.description,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 15.sp,
+                    color = TradingViewDarkTextPrimary
+                )
+                Text(
+                    text = trade.date,
+                    fontSize = 12.sp,
+                    color = TradingViewDarkTextSecondary
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = (if (trade.isWin) "+" else "-") + "$${"%.2f".format(kotlin.math.abs(trade.amount))}",
+                color = if (trade.isWin) TradingViewGreen else TradingViewRed,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .background(
+                        color = if (trade.isWin) TradingViewGreen else TradingViewRed,
+                        shape = CircleShape
+                    )
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RecentTradeCardPreview() {
+    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(8.dp)) {
+        RecentTradeCard(RecentTradeItem("1", "2023-10-26", "Long ETH/USD", true, 150.75))
+    }
+}
+
+// Component Code:
+@Composable
+fun RecentTradesSection(recentTrades: List<RecentTradeItem>) {
+    Column {
+        Text(
+            "Recent Trades",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TradingViewDarkTextPrimary,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        if (recentTrades.isEmpty()) {
+            Text(
+                "No recent trades to show.",
+                color = TradingViewDarkTextSecondary,
+                modifier = Modifier.align(Alignment.CenterHorizontally) // Center if empty
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                recentTrades.take(5).forEach { trade -> // Display up to 5 recent trades
+                    RecentTradeCard(trade) // Using composable from Step 8
+                }
+            }
+        }
+    }
+}
+
+// Preview Code:
+@Preview(showBackground = true, name = "Recent Trades - With Data")
+@Composable
+fun RecentTradesSectionWithDataPreview() {
+    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)) {
+        RecentTradesSection(
+            recentTrades = listOf(
+                RecentTradeItem("1", "2024-07-28", "Long BTCUSDT", true, 150.0),
+                RecentTradeItem("2", "2024-07-27", "Short ETHUSDT", false, -75.5)
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Recent Trades - Empty")
+@Composable
+fun RecentTradesSectionEmptyPreview() {
+    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)) {
+        RecentTradesSection(recentTrades = emptyList())
+    }
+}
+
+// Component Code (using all previously defined sections):
+@Composable
+fun HomeScreen(
+    userProfile: UserProfile = UserProfile("Trader Name", "Scalping"), // Default data
+    accountBalanceInfo: AccountBalanceInfo = AccountBalanceInfo(10250.75, 1.2),
+    tradeStats: List<TradeStatItem> = listOf(
+        TradeStatItem("Total Trades", "152"),
+        TradeStatItem("Win Rate", "68%"),
+        TradeStatItem("Best Trade", "+$250.00")
+    ),
+    tradeInsights: TradeInsights = TradeInsights(250.00, -120.00, "EUR/USD"),
+    recentTrades: List<RecentTradeItem> = listOf(
+        RecentTradeItem("1", "2024-07-28", "Long BTCUSDT", true, 150.0),
+        RecentTradeItem("2", "2024-07-27", "Short ETHUSDT", false, -75.5)
+    )
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = TradingViewDarkBackground
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp) // Space between sections
+        ) {
+            item { HeaderSection(userProfile, accountBalanceInfo) }
+            item { StatsSection(tradeStats) }
+            item { InsightsSection(tradeInsights) }
+            item { RecentTradesSection(recentTrades) }
+        }
+    }
+}
+
+// Preview Code (copied from original, adapted for dark mode via uiMode):
+@Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun HomeScreenPreview() {
+    // If you have a ProfitPathTheme, wrap HomeScreen with it:
+    // ProfitPathTheme {
+    HomeScreen() // Uses the default data provided in HomeScreen's parameters
+    // }
+}
