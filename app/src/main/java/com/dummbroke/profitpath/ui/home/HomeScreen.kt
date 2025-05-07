@@ -1,8 +1,10 @@
 package com.dummbroke.profitpath.ui.home
 
+import android.R.attr.shape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -157,5 +159,161 @@ fun BalanceOverview(accountBalanceInfo: AccountBalanceInfo) {
 fun BalanceOverviewPreview() {
     Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(8.dp)) {
         BalanceOverview(AccountBalanceInfo(25000.0, -0.5))
+    }
+}
+
+@Composable
+fun HeaderSection(userProfile: UserProfile, accountBalanceInfo: AccountBalanceInfo) {
+    Row (
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ){
+        ProfileInfo((userProfile))
+        BalanceOverview((accountBalanceInfo))
+    }
+}
+
+@Preview(showBackground = true, name = "Header Section Preview")
+@Composable
+fun HeaderSectionPreview() {
+    Surface(
+        color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)
+    ) {
+        HeaderSection(UserProfile("Keen Thomas", "Swing Trader"), AccountBalanceInfo(12345.67, 2.5)
+        )
+    }
+}
+
+@Composable
+fun StatCard(stat: TradeStatItem) {
+    Card(
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = TradingViewDarkSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ){
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .widthIn(min = 100.dp),
+            horizontalAlignment =  Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = stat.value,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = TradingViewDarkTextPrimary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stat.label,
+                fontSize = 12.sp,
+                color = TradingViewDarkTextSecondary
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun StatCardPreview() {
+    Surface(color = TradingViewDarkBackground) { // Wrap in a Surface for theming
+        StatCard(TradeStatItem("Win Rate", "75%"))
+    }
+}
+
+@Composable
+fun StatsSection(tradeStats: List<TradeStatItem>) {
+    Column {
+        Text(
+            "Trade Summary",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TradingViewDarkTextPrimary,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(tradeStats) { stat ->
+                StatCard(stat) // Using the composable from Step 4
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+fun StatSectionPreview() {
+    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)) {
+        StatsSection(
+            tradeStats = listOf(
+                TradeStatItem("Total Trades", "143"),
+                TradeStatItem("Win Rate", "75%"),
+                TradeStatItem("Avg Win", "$175"),
+            )
+        )
+    }
+}
+
+// Component Code:
+@Composable
+fun InsightRow(label: String, value: String, valueColor: Color = TradingViewDarkTextPrimary) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 14.sp, color = TradingViewDarkTextSecondary)
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = valueColor)
+    }
+}
+
+// Preview Code:
+@Preview(showBackground = true, name = "Insight Row Preview")
+@Composable
+fun InsightRowPreview() {
+    Surface(color = TradingViewDarkSurface, modifier = Modifier.padding(8.dp).width(300.dp)) {
+        Column {
+            InsightRow("Biggest Win:", "$+250.00", TradingViewGreen)
+            InsightRow("Worst Loss:", "$-120.00", TradingViewRed)
+            InsightRow("Most Traded:", "BTC/USD")
+        }
+    }
+}
+
+// Component Code:
+@Composable
+fun InsightsSection(tradeInsights: TradeInsights) {
+    Column {
+        Text(
+            "Trade Insights",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TradingViewDarkTextPrimary,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = TradingViewDarkSurface),
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                InsightRow("Biggest Win:", "$+${"%.2f".format(tradeInsights.biggestWin)}", TradingViewGreen)
+                InsightRow("Worst Loss:", "$-${"%.2f".format(kotlin.math.abs(tradeInsights.worstLoss))}", TradingViewRed)
+                InsightRow("Most Traded Asset:", tradeInsights.mostTradedAsset)
+            }
+        }
+    }
+}
+
+// Preview Code:
+@Preview(showBackground = true, name = "Insights Section Preview")
+@Composable
+fun InsightsSectionPreview() {
+    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)) {
+        InsightsSection(TradeInsights(350.75, -150.20, "ETH/USD"))
     }
 }
