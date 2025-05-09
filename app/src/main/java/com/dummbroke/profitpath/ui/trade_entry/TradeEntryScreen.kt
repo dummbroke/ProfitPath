@@ -30,9 +30,8 @@ import androidx.compose.ui.unit.sp
 import com.dummbroke.profitpath.R // Assuming you'll add placeholder icons here
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TradeEntryScreen(onNavigateBack: () -> Unit = {}) {
+fun TradeEntryScreen() {
     var tradedPair by remember { mutableStateOf("") }
     var selectedAssetClass by remember { mutableStateOf("Forex") } // Forex, Stocks, Crypto
     var specificAsset by remember { mutableStateOf("") }
@@ -54,69 +53,49 @@ fun TradeEntryScreen(onNavigateBack: () -> Unit = {}) {
 
     val strategies = listOf("Scalping", "Swing Trading", "Breakout", "Position Trading", "Other")
 
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Screenshot Upload Section
+        item {
+            ScreenshotUploadSection(selectedImageUri) {
+                // Handle image selection logic
+            }
+        }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("New Trade Entry", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
+        // Input Fields Group
+        item { AssetClassSelector(selectedAssetClass, assetClasses) { selectedAssetClass = it } }
+        item {
+            SpecificAssetSelector(
+                assetClass = selectedAssetClass,
+                currentValue = specificAsset,
+                forexAssets = specificAssetsForForex,
+                stockAssets = specificAssetsForStocks,
+                cryptoAssets = specificAssetsForCrypto,
+                onValueChange = { specificAsset = it }
             )
-        },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Screenshot Upload Section
-            item {
-                ScreenshotUploadSection(selectedImageUri) {
-                    // Handle image selection logic
-                }
-            }
+        }
+        item { StrategySelector(strategy, strategies) { strategy = it } }
+        item { PositionTypeToggle(isLong) { isLong = it } }
+        item { WinLossToggle(isWin) { isWin = it } }
+        item { TradeDescriptionField(tradeDescription) { tradeDescription = it } }
+        item { DatePickerField(tradeDate) { /* Open Date Picker Dialog */ tradeDate = "2024-07-30" } } // Placeholder
+        item { OptionalBalanceUpdate(updateBalance, balanceAmount, { updateBalance = it }, { balanceAmount = it }) }
 
-            // Input Fields Group
-            item { AssetClassSelector(selectedAssetClass, assetClasses) { selectedAssetClass = it } }
-            item {
-                SpecificAssetSelector(
-                    assetClass = selectedAssetClass,
-                    currentValue = specificAsset,
-                    forexAssets = specificAssetsForForex,
-                    stockAssets = specificAssetsForStocks,
-                    cryptoAssets = specificAssetsForCrypto,
-                    onValueChange = { specificAsset = it }
-                )
-            }
-            item { StrategySelector(strategy, strategies) { strategy = it } }
-            item { PositionTypeToggle(isLong) { isLong = it } }
-            item { WinLossToggle(isWin) { isWin = it } }
-            item { TradeDescriptionField(tradeDescription) { tradeDescription = it } }
-            item { DatePickerField(tradeDate) { /* Open Date Picker Dialog */ tradeDate = "2024-07-30" } } // Placeholder
-            item { OptionalBalanceUpdate(updateBalance, balanceAmount, { updateBalance = it }, { balanceAmount = it }) }
-
-            // Action Bar
-            item {
-                Button(
-                    onClick = { /* Handle Save Trade */ },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Save Trade", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
-                }
+        // Action Bar
+        item {
+            Button(
+                onClick = { /* Handle Save Trade */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Save Trade", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
