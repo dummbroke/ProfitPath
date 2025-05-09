@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -23,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -45,6 +48,16 @@ fun TradeEntryScreen() {
     // Placeholder for image URI or Bitmap
     var selectedImageUri by remember { mutableStateOf<Any?>(null) }
 
+    // New states for enhanced fields
+    var entryPrice by remember { mutableStateOf(TextFieldValue("")) }
+    var stopLossPrice by remember { mutableStateOf(TextFieldValue("")) }
+    var takeProfitPrice by remember { mutableStateOf(TextFieldValue("")) }
+    var preTradeRationale by remember { mutableStateOf(TextFieldValue("")) }
+    var executionNotes by remember { mutableStateOf(TextFieldValue("")) }
+    var postTradeReview by remember { mutableStateOf(TextFieldValue("")) }
+    var tags by remember { mutableStateOf(TextFieldValue("")) }
+    var selectedMarketCondition by remember { mutableStateOf("Ranging") }
+
     val assetClasses = listOf("Forex", "Stocks", "Crypto")
     // Placeholder, will be dynamic based on selectedAssetClass and API
     val specificAssetsForForex = listOf("EUR/USD", "GBP/USD", "USD/JPY")
@@ -52,6 +65,7 @@ fun TradeEntryScreen() {
     val specificAssetsForCrypto = listOf("BTC/USD", "ETH/USD", "ADA/USD")
 
     val strategies = listOf("Scalping", "Swing Trading", "Breakout", "Position Trading", "Other")
+    val marketConditionOptions = listOf("Bullish Trend", "Bearish Trend", "Ranging", "High Volatility", "Low Volatility", "News Event")
 
     LazyColumn(
         modifier = Modifier
@@ -67,6 +81,7 @@ fun TradeEntryScreen() {
         }
 
         // Input Fields Group
+        item { SectionTitle("Trade Setup") }
         item { AssetClassSelector(selectedAssetClass, assetClasses) { selectedAssetClass = it } }
         item {
             SpecificAssetSelector(
@@ -79,14 +94,42 @@ fun TradeEntryScreen() {
             )
         }
         item { StrategySelector(strategy, strategies) { strategy = it } }
+        item { MarketConditionSelector(selectedMarketCondition, marketConditionOptions) { selectedMarketCondition = it } }
         item { PositionTypeToggle(isLong) { isLong = it } }
+
+        item { SectionTitle("Price Levels") }
+        item { PriceInputTextField(label = "Entry Price", value = entryPrice, onValueChange = { entryPrice = it }) }
+        item { PriceInputTextField(label = "Stop-Loss Price", value = stopLossPrice, onValueChange = { stopLossPrice = it }) }
+        item { PriceInputTextField(label = "Take-Profit Price (Optional)", value = takeProfitPrice, onValueChange = { takeProfitPrice = it }, imeAction = ImeAction.Next) }
+
+        item { SectionTitle("Outcome & Notes") }
         item { WinLossToggle(isWin) { isWin = it } }
-        item { TradeDescriptionField(tradeDescription) { tradeDescription = it } }
         item { DatePickerField(tradeDate) { /* Open Date Picker Dialog */ tradeDate = "2024-07-30" } } // Placeholder
+        
+        item { MultiLineTextField(label = "Pre-Trade Rationale / Setup", value = preTradeRationale, onValueChange = { preTradeRationale = it }) }
+        item { MultiLineTextField(label = "Execution Notes", value = executionNotes, onValueChange = { executionNotes = it }) }
+        item { MultiLineTextField(label = "Post-Trade Review / Lessons Learned", value = postTradeReview, onValueChange = { postTradeReview = it }) }
+        
+        item { OutlinedTextField(
+            value = tags,
+            onValueChange = { tags = it },
+            label = { Text("Tags (comma-separated)") },
+            placeholder = { Text("e.g., FOMO, NewsPlay, GoodDiscipline") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            )
+        )}
+
+        item { SectionTitle("Optional Balance Update") }
         item { OptionalBalanceUpdate(updateBalance, balanceAmount, { updateBalance = it }, { balanceAmount = it }) }
 
         // Action Bar
         item {
+            Spacer(modifier = Modifier.height(8.dp)) // Add some space before the final button
             Button(
                 onClick = { /* Handle Save Trade */ },
                 modifier = Modifier
@@ -99,6 +142,17 @@ fun TradeEntryScreen() {
             }
         }
     }
+}
+
+@Composable
+fun SectionTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 8.dp, bottom = 0.dp) // Reduced bottom padding
+    )
 }
 
 @Composable
@@ -294,6 +348,49 @@ fun StrategySelector(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MarketConditionSelector(
+    selectedOption: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Market Condition") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            )
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun PositionTypeToggle(isLong: Boolean, onToggle: (Boolean) -> Unit) {
     Column {
@@ -324,16 +421,45 @@ fun WinLossToggle(isWin: Boolean, onToggle: (Boolean) -> Unit) {
 }
 
 @Composable
-fun TradeDescriptionField(description: TextFieldValue, onValueChange: (TextFieldValue) -> Unit) {
+fun PriceInputTextField(
+    label: String,
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    imeAction: ImeAction = ImeAction.Next
+) {
     OutlinedTextField(
-        value = description,
+        value = value,
         onValueChange = onValueChange,
-        label = { Text("Trade Description") },
+        label = { Text(label) },
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = imeAction
+        ),
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+        )
+    )
+}
+
+@Composable
+fun MultiLineTextField(
+    label: String,
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    lines: Int = 4
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
         modifier = Modifier
             .fillMaxWidth()
-            .height(120.dp), // Multi-line
-        placeholder = { Text("Enter notes, analysis, emotions...") },
-        maxLines = 5,
+            .defaultMinSize(minHeight = (lines * 36).dp), // Approximate height based on lines
+        maxLines = lines + 1, // Allow slight overflow before scroll
+        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = MaterialTheme.colorScheme.outline
@@ -398,8 +524,9 @@ fun OptionalBalanceUpdate(
                 onValueChange = onAmountChange,
                 label = { Text("New Account Balance") },
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done
                 ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
