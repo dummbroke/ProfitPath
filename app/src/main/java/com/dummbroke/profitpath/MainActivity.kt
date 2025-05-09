@@ -3,18 +3,17 @@ package com.dummbroke.profitpath
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.dummbroke.profitpath.ui.home.HomeScreen
+// import com.dummbroke.profitpath.ui.home.HomeScreen // No longer directly called here
+import com.dummbroke.profitpath.ui.navigation.AppNavigation // Import AppNavigation
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
 
-class MainActivity : ComponentActivity() { // Change to ComponentActivity
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // enableEdgeToEdge() // Often handled differently or implicitly in Compose
         setContent { // Use setContent for Compose
             ProfitPathTheme { // Apply your custom theme
-                // Initially, just display the HomeScreen
-                // Later, this will likely be replaced by a NavHost
-                HomeScreen()
+                AppNavigation() // Call AppNavigation here
             }
         }
     }

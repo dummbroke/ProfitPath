@@ -82,3 +82,13 @@ dependencies {
 
     implementation("com.jakewharton.timber:timber:5.0.1")
 }
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions {
+        freeCompilerArgs = freeCompilerArgs + listOf(
+            "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=IntrinsicRemember:true",
+            "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=OptimizeNonSkippingGroups:true",
+            "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=StrongSkipping:true"
+        )
+    }
+}

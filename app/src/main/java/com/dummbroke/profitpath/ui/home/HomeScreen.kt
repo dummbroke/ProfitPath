@@ -28,7 +28,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dummbroke.profitpath.R
-import com.dummbroke.profitpath.ui.theme.ProfitPathTheme // Assuming you have a theme defined
+import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
 
 // --- Data Classes (Placeholders) ---
 data class UserProfile(
@@ -62,12 +62,13 @@ data class RecentTradeItem(
 )
 
 // --- TradingView Inspired Colors (Dark Theme) ---
-val TradingViewDarkBackground = Color(0xFF131722)
-val TradingViewDarkSurface = Color(0xFF1E222D)
-val TradingViewDarkTextPrimary = Color(0xFFD1D4DC)
-val TradingViewDarkTextSecondary = Color(0xFF8A93A6)
-val TradingViewGreen = Color(0xFF26A69A)
-val TradingViewRed = Color(0xFFEF5350)
+// These will be removed and replaced with MaterialTheme.colorScheme
+// val TradingViewDarkBackground = Color(0xFF131722)
+// val TradingViewDarkSurface = Color(0xFF1E222D)
+// val TradingViewDarkTextPrimary = Color(0xFFD1D4DC)
+// val TradingViewDarkTextSecondary = Color(0xFF8A93A6)
+// val TradingViewGreen = Color(0xFF26A69A)
+// val TradingViewRed = Color(0xFFEF5350)
 
 @Composable
 fun ProfileInfo(userProfile: UserProfile){
@@ -79,7 +80,8 @@ fun ProfileInfo(userProfile: UserProfile){
             contentDescription = "Profile Image",
             modifier = Modifier
                 .size(50.dp)
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface), // Updated color
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.width(12.dp))
@@ -88,12 +90,12 @@ fun ProfileInfo(userProfile: UserProfile){
                 text = userProfile.name,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = TradingViewDarkTextPrimary
+                color = MaterialTheme.colorScheme.onBackground // Updated color
             )
             Text(
                 text = userProfile.tradingStyle,
                 fontSize = 14.sp,
-                color = TradingViewDarkTextPrimary
+                color = MaterialTheme.colorScheme.onSurface // Updated color for secondary text
             )
         }
     }
@@ -102,18 +104,20 @@ fun ProfileInfo(userProfile: UserProfile){
 @Preview(showBackground = true, name = "Profile Info Preview")
 @Composable
 fun ProfileInfoPreview() {
-    Surface(
-        color = TradingViewDarkBackground
-    ) {
-        ProfileInfo(UserProfile("Keen Thomas", "Swing Trader"))
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(
+            color = MaterialTheme.colorScheme.background // Updated color
+        ) {
+            ProfileInfo(UserProfile("Keen Thomas", "Swing Trader"))
+        }
     }
 }
-// Component Code:
+
 @Composable
 fun BalanceOverview(accountBalanceInfo: AccountBalanceInfo) {
     Card(
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = TradingViewDarkSurface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), // Updated color
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
@@ -123,17 +127,16 @@ fun BalanceOverview(accountBalanceInfo: AccountBalanceInfo) {
             Text(
                 "Account Balance",
                 fontSize = 12.sp,
-                color = TradingViewDarkTextSecondary
+                color = MaterialTheme.colorScheme.onSurface // Updated color
             )
             Text(
                 text = "$${"%.2f".format(accountBalanceInfo.balance)}",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
-                color = TradingViewDarkTextPrimary
+                color = MaterialTheme.colorScheme.onBackground // Updated color
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val changeColor = if (accountBalanceInfo.dailyChangePercentage >= 0) TradingViewGreen else TradingViewRed
-                // Ensure you have ic_upward and ic_downward in your res/drawable
+                val changeColor = if (accountBalanceInfo.dailyChangePercentage >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error // Updated colors
                 val arrowResource = if (accountBalanceInfo.dailyChangePercentage >= 0) R.drawable.ic_upward else R.drawable.ic_downward
 
                 Image(
@@ -153,12 +156,13 @@ fun BalanceOverview(accountBalanceInfo: AccountBalanceInfo) {
     }
 }
 
-// Preview Code (copied from the original file):
 @Preview(showBackground = true)
 @Composable
 fun BalanceOverviewPreview() {
-    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(8.dp)) {
-        BalanceOverview(AccountBalanceInfo(25000.0, -0.5))
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(8.dp)) { // Updated color
+            BalanceOverview(AccountBalanceInfo(25000.0, -0.5))
+        }
     }
 }
 
@@ -169,19 +173,21 @@ fun HeaderSection(userProfile: UserProfile, accountBalanceInfo: AccountBalanceIn
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ){
-        ProfileInfo((userProfile))
-        BalanceOverview((accountBalanceInfo))
+        ProfileInfo(userProfile)
+        BalanceOverview(accountBalanceInfo)
     }
 }
 
 @Preview(showBackground = true, name = "Header Section Preview")
 @Composable
 fun HeaderSectionPreview() {
-    Surface(
-        color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)
-    ) {
-        HeaderSection(UserProfile("Keen Thomas", "Swing Trader"), AccountBalanceInfo(12345.67, 2.5)
-        )
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(
+            color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(16.dp) // Updated color
+        ) {
+            HeaderSection(UserProfile("Keen Thomas", "Swing Trader"), AccountBalanceInfo(12345.67, 2.5)
+            )
+        }
     }
 }
 
@@ -189,7 +195,7 @@ fun HeaderSectionPreview() {
 fun StatCard(stat: TradeStatItem) {
     Card(
         shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = TradingViewDarkSurface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), // Updated color
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ){
         Column(
@@ -203,13 +209,13 @@ fun StatCard(stat: TradeStatItem) {
                 text = stat.value,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = TradingViewDarkTextPrimary
+                color = MaterialTheme.colorScheme.onSurface // Updated color (text on card surface)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = stat.label,
                 fontSize = 12.sp,
-                color = TradingViewDarkTextSecondary
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) // Slightly dimmer for secondary label on card
             )
         }
     }
@@ -218,8 +224,10 @@ fun StatCard(stat: TradeStatItem) {
 @Preview(showBackground = true)
 @Composable
 fun StatCardPreview() {
-    Surface(color = TradingViewDarkBackground) { // Wrap in a Surface for theming
-        StatCard(TradeStatItem("Win Rate", "75%"))
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(color = MaterialTheme.colorScheme.background) { // Updated color
+            StatCard(TradeStatItem("Win Rate", "75%"))
+        }
     }
 }
 
@@ -230,7 +238,7 @@ fun StatsSection(tradeStats: List<TradeStatItem>) {
             "Trade Summary",
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
-            color = TradingViewDarkTextPrimary,
+            color = MaterialTheme.colorScheme.onBackground, // Updated color
             modifier = Modifier.padding(bottom = 12.dp)
         )
         LazyRow(
@@ -238,7 +246,7 @@ fun StatsSection(tradeStats: List<TradeStatItem>) {
             modifier = Modifier.fillMaxWidth()
         ) {
             items(tradeStats) { stat ->
-                StatCard(stat) // Using the composable from Step 4
+                StatCard(stat)
             }
         }
     }
@@ -247,43 +255,44 @@ fun StatsSection(tradeStats: List<TradeStatItem>) {
 @Preview
 @Composable
 fun StatSectionPreview() {
-    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)) {
-        StatsSection(
-            tradeStats = listOf(
-                TradeStatItem("Total Trades", "143"),
-                TradeStatItem("Win Rate", "75%"),
-                TradeStatItem("Avg Win", "$175"),
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(16.dp)) { // Updated color
+            StatsSection(
+                tradeStats = listOf(
+                    TradeStatItem("Total Trades", "143"),
+                    TradeStatItem("Win Rate", "75%"),
+                    TradeStatItem("Avg Win", "$175"),
+                )
             )
-        )
-    }
-}
-
-// Component Code:
-@Composable
-fun InsightRow(label: String, value: String, valueColor: Color = TradingViewDarkTextPrimary) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, fontSize = 14.sp, color = TradingViewDarkTextSecondary)
-        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = valueColor)
-    }
-}
-
-// Preview Code:
-@Preview(showBackground = true, name = "Insight Row Preview")
-@Composable
-fun InsightRowPreview() {
-    Surface(color = TradingViewDarkSurface, modifier = Modifier.padding(8.dp).width(300.dp)) {
-        Column {
-            InsightRow("Biggest Win:", "$+250.00", TradingViewGreen)
-            InsightRow("Worst Loss:", "$-120.00", TradingViewRed)
-            InsightRow("Most Traded:", "BTC/USD")
         }
     }
 }
 
-// Component Code:
+@Composable
+fun InsightRow(label: String, value: String, valueColor: Color = MaterialTheme.colorScheme.onSurface) { // Updated default color
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)) // Updated color
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = valueColor)
+    }
+}
+
+@Preview(showBackground = true, name = "Insight Row Preview")
+@Composable
+fun InsightRowPreview() {
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(8.dp).width(300.dp)) { // Updated color
+            Column {
+                InsightRow("Biggest Win:", "$+250.00", MaterialTheme.colorScheme.primary) // Updated color
+                InsightRow("Worst Loss:", "$-120.00", MaterialTheme.colorScheme.error) // Updated color
+                InsightRow("Most Traded:", "BTC/USD")
+            }
+        }
+    }
+}
+
 @Composable
 fun InsightsSection(tradeInsights: TradeInsights) {
     Column {
@@ -291,30 +300,31 @@ fun InsightsSection(tradeInsights: TradeInsights) {
             "Trade Insights",
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
-            color = TradingViewDarkTextPrimary,
+            color = MaterialTheme.colorScheme.onBackground, // Updated color
             modifier = Modifier.padding(bottom = 12.dp)
         )
         Card(
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = TradingViewDarkSurface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), // Updated color
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                InsightRow("Biggest Win:", "$+${"%.2f".format(tradeInsights.biggestWin)}", TradingViewGreen)
-                InsightRow("Worst Loss:", "$-${"%.2f".format(kotlin.math.abs(tradeInsights.worstLoss))}", TradingViewRed)
+                InsightRow("Biggest Win:", "$+${"%.2f".format(tradeInsights.biggestWin)}", MaterialTheme.colorScheme.primary) // Updated color
+                InsightRow("Worst Loss:", "$-${"%.2f".format(kotlin.math.abs(tradeInsights.worstLoss))}", MaterialTheme.colorScheme.error) // Updated color
                 InsightRow("Most Traded Asset:", tradeInsights.mostTradedAsset)
             }
         }
     }
 }
 
-// Preview Code:
 @Preview(showBackground = true, name = "Insights Section Preview")
 @Composable
 fun InsightsSectionPreview() {
-    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)) {
-        InsightsSection(TradeInsights(350.75, -150.20, "ETH/USD"))
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(16.dp)) { // Updated color
+            InsightsSection(TradeInsights(350.75, -150.20, "ETH/USD"))
+        }
     }
 }
 
@@ -322,7 +332,7 @@ fun InsightsSectionPreview() {
 fun RecentTradeCard(trade: RecentTradeItem) {
     Card(
         shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = TradingViewDarkSurface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), // Updated color
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -338,18 +348,18 @@ fun RecentTradeCard(trade: RecentTradeItem) {
                     text = trade.description,
                     fontWeight = FontWeight.Medium,
                     fontSize = 15.sp,
-                    color = TradingViewDarkTextPrimary
+                    color = MaterialTheme.colorScheme.onSurface // Updated color
                 )
                 Text(
                     text = trade.date,
                     fontSize = 12.sp,
-                    color = TradingViewDarkTextSecondary
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) // Updated color
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = (if (trade.isWin) "+" else "-") + "$${"%.2f".format(kotlin.math.abs(trade.amount))}",
-                color = if (trade.isWin) TradingViewGreen else TradingViewRed,
+                color = if (trade.isWin) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error, // Updated colors
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
@@ -358,7 +368,7 @@ fun RecentTradeCard(trade: RecentTradeItem) {
                 modifier = Modifier
                     .size(10.dp)
                     .background(
-                        color = if (trade.isWin) TradingViewGreen else TradingViewRed,
+                        color = if (trade.isWin) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error, // Updated colors
                         shape = CircleShape
                     )
             )
@@ -369,12 +379,13 @@ fun RecentTradeCard(trade: RecentTradeItem) {
 @Preview(showBackground = true)
 @Composable
 fun RecentTradeCardPreview() {
-    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(8.dp)) {
-        RecentTradeCard(RecentTradeItem("1", "2023-10-26", "Long ETH/USD", true, 150.75))
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(8.dp)) { // Updated color
+            RecentTradeCard(RecentTradeItem("1", "2023-10-26", "Long ETH/USD", true, 150.75))
+        }
     }
 }
 
-// Component Code:
 @Composable
 fun RecentTradesSection(recentTrades: List<RecentTradeItem>) {
     Column {
@@ -382,51 +393,53 @@ fun RecentTradesSection(recentTrades: List<RecentTradeItem>) {
             "Recent Trades",
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
-            color = TradingViewDarkTextPrimary,
+            color = MaterialTheme.colorScheme.onBackground, // Updated color
             modifier = Modifier.padding(bottom = 12.dp)
         )
         if (recentTrades.isEmpty()) {
             Text(
                 "No recent trades to show.",
-                color = TradingViewDarkTextSecondary,
-                modifier = Modifier.align(Alignment.CenterHorizontally) // Center if empty
+                color = MaterialTheme.colorScheme.onSurface, // Updated color
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                recentTrades.take(5).forEach { trade -> // Display up to 5 recent trades
-                    RecentTradeCard(trade) // Using composable from Step 8
+                recentTrades.take(5).forEach { trade ->
+                    RecentTradeCard(trade)
                 }
             }
         }
     }
 }
 
-// Preview Code:
 @Preview(showBackground = true, name = "Recent Trades - With Data")
 @Composable
 fun RecentTradesSectionWithDataPreview() {
-    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)) {
-        RecentTradesSection(
-            recentTrades = listOf(
-                RecentTradeItem("1", "2024-07-28", "Long BTCUSDT", true, 150.0),
-                RecentTradeItem("2", "2024-07-27", "Short ETHUSDT", false, -75.5)
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(16.dp)) { // Updated color
+            RecentTradesSection(
+                recentTrades = listOf(
+                    RecentTradeItem("1", "2024-07-28", "Long BTCUSDT", true, 150.0),
+                    RecentTradeItem("2", "2024-07-27", "Short ETHUSDT", false, -75.5)
+                )
             )
-        )
+        }
     }
 }
 
 @Preview(showBackground = true, name = "Recent Trades - Empty")
 @Composable
 fun RecentTradesSectionEmptyPreview() {
-    Surface(color = TradingViewDarkBackground, modifier = Modifier.padding(16.dp)) {
-        RecentTradesSection(recentTrades = emptyList())
+    ProfitPathTheme { // Wrapped in Theme
+        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(16.dp)) { // Updated color
+            RecentTradesSection(recentTrades = emptyList())
+        }
     }
 }
 
-// Component Code (using all previously defined sections):
 @Composable
 fun HomeScreen(
-    userProfile: UserProfile = UserProfile("Trader Name", "Scalping"), // Default data
+    userProfile: UserProfile = UserProfile("Trader Name", "Scalping"),
     accountBalanceInfo: AccountBalanceInfo = AccountBalanceInfo(10250.75, 1.2),
     tradeStats: List<TradeStatItem> = listOf(
         TradeStatItem("Total Trades", "152"),
@@ -439,30 +452,30 @@ fun HomeScreen(
         RecentTradeItem("2", "2024-07-27", "Short ETHUSDT", false, -75.5)
     )
 ) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = TradingViewDarkBackground
-    ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp) // Space between sections
+    ProfitPathTheme { // Wrapped main content in Theme
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background // Updated color
         ) {
-            item { HeaderSection(userProfile, accountBalanceInfo) }
-            item { StatsSection(tradeStats) }
-            item { InsightsSection(tradeInsights) }
-            item { RecentTradesSection(recentTrades) }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                item { HeaderSection(userProfile, accountBalanceInfo) }
+                item { StatsSection(tradeStats) }
+                item { InsightsSection(tradeInsights) }
+                item { RecentTradesSection(recentTrades) }
+            }
         }
     }
 }
 
-// Preview Code (copied from original, adapted for dark mode via uiMode):
 @Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun HomeScreenPreview() {
-    // If you have a ProfitPathTheme, wrap HomeScreen with it:
-    // ProfitPathTheme {
-    HomeScreen() // Uses the default data provided in HomeScreen's parameters
-    // }
+    ProfitPathTheme { // Ensure preview uses the theme
+        HomeScreen()
+    }
 }
