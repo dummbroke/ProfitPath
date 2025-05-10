@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -18,6 +17,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dummbroke.profitpath.R
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
 import androidx.compose.ui.graphics.Color
@@ -27,15 +27,17 @@ import androidx.compose.ui.graphics.Color
 // --- Main Settings Screen Composable ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
     // States for editable settings
     var traderName by remember { mutableStateOf(TextFieldValue("John Trader")) }
     var tradingStyle by remember { mutableStateOf("Day Trader") }
-    var isDarkMode by remember { mutableStateOf(true) } // Assuming default is dark
     var currentBalance by remember { mutableStateOf(TextFieldValue("12550.75")) }
 
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
+
+    // Observe isDarkMode from ViewModel
+    val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
 
     // Dummy data for display
     val loggedInUserEmail = "john.trader@example.com"
@@ -68,7 +70,12 @@ fun SettingsScreen() {
         // Appearance & Display Section
         item {
             SettingsSectionTitle("Appearance & Display")
-            SwitchSettingItem(iconRes = R.drawable.ic_settings_theme_mode_placeholder, title = "Dark Mode", checked = isDarkMode, onCheckedChange = { isDarkMode = it })
+            SwitchSettingItem(
+                iconRes = R.drawable.ic_settings_theme_mode_placeholder,
+                title = "Dark Mode",
+                checked = isDarkMode,
+                onCheckedChange = { settingsViewModel.toggleTheme(it) }
+            )
         }
 
         // Data & Sync Management Section

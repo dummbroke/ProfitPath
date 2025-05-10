@@ -283,7 +283,9 @@ fun InsightRow(label: String, value: String, valueColor: Color = MaterialTheme.c
 @Composable
 fun InsightRowPreview() {
     ProfitPathTheme { // Wrapped in Theme
-        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(8.dp).width(300.dp)) { // Updated color
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier
+            .padding(8.dp)
+            .width(300.dp)) { // Updated color
             Column {
                 InsightRow("Biggest Win:", "$+250.00", MaterialTheme.colorScheme.primary) // Updated color
                 InsightRow("Worst Loss:", "$-120.00", MaterialTheme.colorScheme.error) // Updated color
@@ -452,22 +454,20 @@ fun HomeScreen(
         RecentTradeItem("2", "2024-07-27", "Short ETHUSDT", false, -75.5)
     )
 ) {
-    ProfitPathTheme { // Wrapped main content in Theme
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background // Updated color
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background // Updated color
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                item { HeaderSection(userProfile, accountBalanceInfo) }
-                item { StatsSection(tradeStats) }
-                item { InsightsSection(tradeInsights) }
-                item { RecentTradesSection(recentTrades) }
-            }
+            item { HeaderSection(userProfile, accountBalanceInfo) }
+            item { StatsSection(tradeStats) }
+            item { InsightsSection(tradeInsights) }
+            item { RecentTradesSection(recentTrades) }
         }
     }
 }
@@ -475,7 +475,17 @@ fun HomeScreen(
 @Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun HomeScreenPreview() {
-    ProfitPathTheme { // Ensure preview uses the theme
+    ProfitPathTheme(darkTheme = true) { // Preview ensures dark theme
         HomeScreen()
+    }
+}
+
+@Preview(showBackground = true, name = "Home Screen Light")
+@Composable
+fun HomeScreenPreviewLight() {
+    ProfitPathTheme(darkTheme = false) { // Preview ensures light theme
+        Surface(color = MaterialTheme.colorScheme.background) { // Surface is good for previews
+            HomeScreen()
+        }
     }
 }

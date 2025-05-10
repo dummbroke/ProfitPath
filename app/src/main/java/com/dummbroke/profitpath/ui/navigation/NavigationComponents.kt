@@ -20,6 +20,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -206,6 +207,20 @@ fun AppBottomNavigationBarPreview() {
     }
 }
 
+@Preview(showBackground = true, name = "Bottom Nav Light")
+@Composable
+fun AppBottomNavigationBarPreviewLight() {
+    ProfitPathTheme(darkTheme = false) {
+        Surface(color = MaterialTheme.colorScheme.surface) { // Use Surface for better preview
+            var currentRoute by remember { mutableStateOf(Screen.Home.route) }
+            AppBottomNavigationBar(
+                currentRoute = currentRoute,
+                onNavigate = { route -> currentRoute = route }
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun AppBottomNavigationBarPreviewTradeHistorySelected() {
@@ -219,6 +234,20 @@ fun AppBottomNavigationBarPreviewTradeHistorySelected() {
     }
 }
 
+@Preview(showBackground = true, name = "Bottom Nav History Light")
+@Composable
+fun AppBottomNavigationBarPreviewTradeHistorySelectedLight() {
+    ProfitPathTheme(darkTheme = false) {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            var currentRoute by remember { mutableStateOf(Screen.TradeHistory.route) }
+            AppBottomNavigationBar(
+                currentRoute = currentRoute,
+                onNavigate = { route -> currentRoute = route }
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun AppDrawerContentPreview() {
@@ -229,5 +258,20 @@ fun AppDrawerContentPreview() {
             navigateToScreen = {}, 
             closeDrawer = {}
         )
+    }
+}
+
+@Preview(showBackground = true, name = "Drawer Content Light")
+@Composable
+fun AppDrawerContentPreviewLight() {
+    ProfitPathTheme(darkTheme = false) {
+        Surface(color = MaterialTheme.colorScheme.background) { // Use Surface for better preview
+            AppDrawerContent(
+                drawerItems = drawerNavItems,
+                currentRoute = Screen.PerformanceSummary.route, 
+                navigateToScreen = {}, 
+                closeDrawer = {}
+            )
+        }
     }
 }
