@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.0"
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -50,6 +51,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.firebase.firestore)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -86,14 +88,19 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
+    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
+    implementation("com.google.firebase:firebase-analytics")
+
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
-        freeCompilerArgs = freeCompilerArgs + listOf(
-            "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=IntrinsicRemember:true",
-            "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=OptimizeNonSkippingGroups:true",
-            "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=StrongSkipping:true"
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            listOf(
+                "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=IntrinsicRemember:true",
+                "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=OptimizeNonSkippingGroups:true",
+                "-P", "plugin:androidx.compose.compiler.plugins.kotlin:featureFlag=StrongSkipping:true"
+            )
         )
     }
 }
