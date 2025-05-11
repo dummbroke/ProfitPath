@@ -225,7 +225,7 @@ fun TradeInfoSection(details: TradeDetailData) {
             InfoRow("Market Condition:", details.marketCondition)
             InfoRow("Position Type:", details.positionType)
             
-            Divider(modifier = Modifier.padding(vertical = 6.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
             
             Text("Financials", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             InfoRow("Entry Price:", formatCurrencyDetail(details.entryPrice))

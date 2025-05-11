@@ -86,7 +86,8 @@ fun ProfitPathTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb() // Use background for status bar
+            // window.statusBarColor = colorScheme.background.toArgb() // Deprecated way
+            window.statusBarColor = colorScheme.background.toArgb() // Still the most direct way for this API level if not using accompanist
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

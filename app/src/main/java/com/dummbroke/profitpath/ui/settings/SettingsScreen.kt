@@ -27,12 +27,16 @@ import androidx.compose.ui.graphics.Color
 // --- Main Settings Screen Composable ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
+fun SettingsScreen(
+    settingsViewModel: SettingsViewModel = viewModel()
+) {
     // States for editable settings
     var traderName by remember { mutableStateOf(TextFieldValue("John Trader")) }
     var tradingStyle by remember { mutableStateOf("Day Trader") }
     var currentBalance by remember { mutableStateOf(TextFieldValue("12550.75")) }
 
+    // Observe dialog states from ViewModel
+    val showLogoutConfirmDialog by settingsViewModel.showLogoutConfirmDialog.collectAsState()
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
 
@@ -55,7 +59,12 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
             SettingsSectionTitle("Account Management")
             SettingItem(iconRes = R.drawable.ic_settings_person_placeholder, title = "Logged in as", subtitle = loggedInUserEmail)
             SettingItem(iconRes = R.drawable.ic_settings_lock_reset_placeholder, title = "Change Password", isClickable = true, onClick = { /* TODO: Navigate to Change Password flow */ }) {}
-            SettingItem(iconRes = R.drawable.ic_settings_logout_placeholder, title = "Logout", isClickable = true, onClick = { /* TODO: Handle Logout */ }) {}
+            SettingItem(
+                iconRes = R.drawable.ic_settings_logout_placeholder, 
+                title = "Logout", 
+                isClickable = true, 
+                onClick = { settingsViewModel.onLogoutClicked() }
+            ) {}
             SettingItem(iconRes = R.drawable.ic_settings_delete_forever_placeholder, title = "Delete Account", titleColor = MaterialTheme.colorScheme.error, isClickable = true, onClick = { showDeleteAccountDialog = true }) {}
         }
 
@@ -97,6 +106,16 @@ fun SettingsScreen(settingsViewModel: SettingsViewModel = viewModel()) {
             SettingItem(iconRes = R.drawable.ic_settings_send_feedback_placeholder, title = "Send Feedback", isClickable = true, onClick = { /* TODO: Open Email/Form */ }) {}
             SettingItem(iconRes = R.drawable.ic_settings_rate_app_placeholder, title = "Rate App", isClickable = true, onClick = { /* TODO: Open Play Store */ }) {}
         }
+    }
+
+    if (showLogoutConfirmDialog) {
+        ConfirmationDialog(
+            title = "Logout?",
+            text = "Are you sure you want to log out?",
+            confirmButtonText = "Logout",
+            onConfirm = { settingsViewModel.onLogoutConfirmed() },
+            onDismiss = { settingsViewModel.onDismissLogoutDialog() }
+        )
     }
 
     if (showDeleteAccountDialog) {

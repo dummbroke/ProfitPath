@@ -401,7 +401,8 @@ fun PerformanceByStrategyTable(performance: List<PerformanceByStrategy>) {
                     Text("Win %", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.weight(0.2f))
                     Text("Net P&L", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(0.25f))
                 }
-                Divider()
+                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
+
                 performance.forEach {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -420,7 +421,7 @@ fun PerformanceByStrategyTable(performance: List<PerformanceByStrategy>) {
                             modifier = Modifier.weight(0.25f)
                         )
                     }
-                    Divider()
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 }
             }
         }
