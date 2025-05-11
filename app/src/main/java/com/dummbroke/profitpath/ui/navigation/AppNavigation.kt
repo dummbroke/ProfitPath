@@ -1,5 +1,6 @@
 package com.dummbroke.profitpath.ui.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -92,7 +93,9 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
     }
 
     val showTopAndBottomBars = currentUser != null && 
-        (bottomNavItems.any { it.route == currentRoute } || drawerNavItems.any { it.route == currentRoute } || currentRoute?.startsWith(Screen.SingleTradeView.route) == true)
+        (bottomNavItems.any { it.route == currentRoute } || 
+         drawerNavItems.any { it.route == currentRoute } || 
+         currentRoute?.startsWith(Screen.SingleTradeView.route) == true)
 
     val showBackButton = showTopAndBottomBars && when (currentRoute) {
         Screen.PerformanceSummary.route,
@@ -194,7 +197,7 @@ fun MainAppScaffold(
     val actualShowBackButton = when (nestedCurrentRoute) {
         Screen.PerformanceSummary.route,
         Screen.Settings.route,
-        Screen.SingleTradeView.route -> mainAppNavController.previousBackStackEntry != null // Use new NavController
+        Screen.SingleTradeView.route -> mainAppNavController.previousBackStackEntry != null
         else -> if (nestedCurrentRoute?.startsWith(Screen.SingleTradeView.route + "/") == true) {
             mainAppNavController.previousBackStackEntry != null // Use new NavController
         } else {
@@ -268,18 +271,17 @@ fun MainAppScaffold(
                 navController = mainAppNavController, // Use the new, dedicated NavController
                 startDestination = Screen.Home.route, 
                 modifier = Modifier.padding(innerPadding)
-                // route = MainAppDestinations.Home // This NavHost doesn't need a graph route itself if it's the content of a scaffold screen
             ) {
                 composable(Screen.Home.route) {
                     HomeScreen()
                 }
                 composable(Screen.TradeEntry.route) {
-                    TradeEntryScreen()
+                    TradeEntryScreen(navController = mainAppNavController) // Pass NavController
                 }
                 composable(Screen.TradeHistory.route) {
                     TradeHistoryScreen(
                         onTradeClick = { tradeId ->
-                            mainAppNavController.navigate("${Screen.SingleTradeView.route}/$tradeId") // Use new NavController
+                            mainAppNavController.navigate("${Screen.SingleTradeView.route}/$tradeId")
                         }
                     )
                 }
