@@ -6,19 +6,102 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
 
 // Create a DataStore instance, tied to the application's lifecycle
 // The name "user_settings" is the name of the preferences file.
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
 
+// User Profile Data Class
+data class UserProfile(
+    val email: String = "",
+    val displayName: String = "",
+    val tradingStyle: String = "day_trader", // Default style
+    val currentBalance: Double = 0.0
+)
+
 class SettingsRepository(private val context: Context) { // Accept Context
+
+    private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     private object PreferencesKeys {
         val IS_DARK_MODE = booleanPreferencesKey("is_dark_mode")
     }
 
+    private fun getCurrentUserId(): String? = firebaseAuth.currentUser?.uid
+
+    fun getUserEmail(): String? = firebaseAuth.currentUser?.email
+
+    fun getUserProfile(): Flow<UserProfile?> = flow {
+        val userId = getCurrentUserId()
+        if (userId == null) {
+            emit(UserProfile(email = getUserEmail() ?: "")) // Emit profile with email only if no user ID (e.g. not fully logged in)
+            return@flow
+        }
+        val docRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
+        
+        val snapshot = docRef.get().await()
+        if (snapshot.exists()) {
+            val profile = snapshot.toObject(UserProfile::class.java)
+            // Ensure email from auth is part of the emitted profile, as it's not stored in Firestore doc directly here
+            emit(profile?.copy(email = getUserEmail() ?: profile.email))
+        } else {
+            // User profile document doesn't exist, emit default profile with email
+            // This is also where we ensure a new user gets a 0.0 balance.
+            emit(UserProfile(email = getUserEmail() ?: "", currentBalance = 0.0, displayName = firebaseAuth.currentUser?.displayName ?: ""))
+        }
+    }.catch { e ->
+        // Log error or handle it
+        emit(UserProfile(email = getUserEmail() ?: "", currentBalance = 0.0)) // Emit default on error
+    }
+
+    suspend fun updateDisplayName(name: String): Result<Unit> {
+        return try {
+            val userId = getCurrentUserId()
+            if (userId == null) return Result.failure(Exception("User not logged in"))
+            val profileDocRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
+            profileDocRef.set(mapOf("displayName" to name), SetOptions.merge()).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateTradingStyle(styleId: String): Result<Unit> {
+        return try {
+            val userId = getCurrentUserId()
+            if (userId == null) return Result.failure(Exception("User not logged in"))
+            val profileDocRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
+            profileDocRef.set(mapOf("tradingStyle" to styleId), SetOptions.merge()).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateCurrentBalance(balance: Double): Result<Unit> {
+        return try {
+            val userId = getCurrentUserId()
+            if (userId == null) return Result.failure(Exception("User not logged in"))
+            val profileDocRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
+            // Ensure balance is not negative, or handle as per requirements
+            val validBalance = if (balance < 0) 0.0 else balance
+            profileDocRef.set(mapOf("currentBalance" to validBalance), SetOptions.merge()).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Theme Preference
     suspend fun setThemePreference(isDark: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_DARK_MODE] = isDark
