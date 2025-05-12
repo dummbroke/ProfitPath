@@ -1,6 +1,7 @@
 package com.dummbroke.profitpath.ui.navigation
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -279,11 +280,7 @@ fun MainAppScaffold(
                     TradeEntryScreen(navController = mainAppNavController) // Pass NavController
                 }
                 composable(Screen.TradeHistory.route) {
-                    TradeHistoryScreen(
-                        onTradeClick = { tradeId ->
-                            mainAppNavController.navigate("${Screen.SingleTradeView.route}/$tradeId")
-                        }
-                    )
+                    TradeHistoryScreen(navController = mainAppNavController)
                 }
                 composable(Screen.PerformanceSummary.route) {
                     PerformanceScreen()
@@ -291,16 +288,21 @@ fun MainAppScaffold(
                 composable(Screen.Settings.route) {
                     SettingsScreen(settingsViewModel = settingsViewModel)
                 }
-                composable(Screen.SingleTradeView.route) { 
-                    TradeDetailScreen(tradeId = null)
-                }
+                // Define the route WITH {tradeId} parameter FIRST
                 composable(
                     route = "${Screen.SingleTradeView.route}/{tradeId}",
                     arguments = listOf(navArgument("tradeId") { type = NavType.StringType })
                 ) { backStackEntry ->
                     val tradeId = backStackEntry.arguments?.getString("tradeId")
-                    TradeDetailScreen(tradeId = tradeId)
+                    Log.d("AppNavigation", "PARAM ROUTE ('${Screen.SingleTradeView.route}/{tradeId}'): tradeId='$tradeId'")
+                    TradeDetailScreen(navController = mainAppNavController, tradeId = tradeId)
                 }
+                // Non-parameterized route is currently commented out to ensure the above is hit.
+                // If needed later for direct access without an ID, add it back carefully with a distinct route name.
+                // composable(Screen.SingleTradeView.route + "_no_id") { // Example: "trade_detail_view_no_id"
+                //     Log.d("AppNavigation", "Composable for SingleTradeView (no ID) invoked")
+                //     TradeDetailScreen(navController = mainAppNavController, tradeId = null)
+                // }
             }
         }
     }

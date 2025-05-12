@@ -6,6 +6,7 @@ import android.os.Environment
 import com.dummbroke.profitpath.core.models.Trade
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -29,7 +30,7 @@ class TradeEntryRepository(
                 return@withContext Result.failure(Exception("User not logged in"))
             }
             trade.userId = userId
-            trade.lastUpdated = Date() // Set last updated time, server will set initial timestamp
+            trade.lastUpdated = Timestamp.now() // Set last updated time as Firestore Timestamp
 
             // Handle image saving
             if (imageUri != null) {

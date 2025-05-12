@@ -1,5 +1,6 @@
 package com.dummbroke.profitpath.ui.trade_history
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,21 +22,54 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dummbroke.profitpath.R
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
+import androidx.navigation.NavHostController
+import androidx.compose.ui.platform.LocalContext
+import com.dummbroke.profitpath.ui.navigation.Screen
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import androidx.compose.ui.window.Dialog
+import com.dummbroke.profitpath.core.models.Trade
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dummbroke.profitpath.ui.trade_history.TradeHistoryUiState
+import com.dummbroke.profitpath.ui.trade_history.TradeHistoryViewModel
 
 // --- Data Class for Trade History Item ---
 data class TradeHistoryItem(
     val id: String,
-    val pair: String,
     val date: String,
-    val outcome: TradeOutcome, // Win, Loss, BreakEven
-    val descriptionSnippet: String,
-    val balanceChange: Double? = null, // Optional: positive for profit, negative for loss
-    val strategy: String // Added strategy for filtering
+    val assetPair: String,
+    val outcome: String, // "Win", "Loss", "Breakeven"
+    val pnl: Double,
+    val riskRewardRatio: String?, // e.g., "2.5:1"
+    val strategy: String?,
+    val screenshotUri: String? = null, // Added for future use with dialog
+    // Add all other fields from TradeDetailData that you need for the dialog
+    val assetClass: String = "Forex",
+    val marketCondition: String = "Trending",
+    val positionType: String = "Long",
+    val entryPrice: Double? = 1.2345,
+    val stopLossPrice: Double? = 1.2300,
+    val takeProfitPrice: Double? = 1.2400,
+    val entryAmountUSD: Double? = 1000.0,
+    val balanceBeforeTrade: Double? = 10000.0,
+    val accountBalanceAfterTrade: Double? = 10050.0,
+    val preTradeRationale: String = "Price broke above resistance.",
+    val executionNotes: String = "Slight slippage on entry.",
+    val postTradeReview: String = "Should have held longer.",
+    val tags: List<String> = listOf("Breakout", "EURUSD"),
+    val percentagePnl: Double? = 5.0,
+    val exitTimestamp: String? = "2023-10-27 10:30",
+    val entryClientTimestamp: String? = "2023-10-27 09:00",
+    val balanceUpdated: Boolean = true,
+    val leverage: Double? = 50.0
 )
 
 enum class TradeOutcome {
@@ -44,73 +79,165 @@ enum class TradeOutcome {
 const val DEFAULT_FILTER_ALL = "All"
 const val DEFAULT_FILTER_ANY = "Any"
 
-// --- Composable Functions ---
+// --- Copied from TradeDetailScreen.kt ---
+data class TradeDetailData( // This will be used by the Dialog, populated from TradeHistoryItem
+    val id: String,
+    val assetPair: String,
+    val assetClass: String,
+    val date: String,
+    val strategy: String,
+    val marketCondition: String,
+    val positionType: String,
+    val entryPrice: Double?,
+    val stopLossPrice: Double?,
+    val takeProfitPrice: Double?,
+    val outcome: String,
+    val pnlAmount: Double?,
+    val entryAmountUSD: Double?,
+    val balanceBeforeTrade: Double?,
+    val accountBalanceAfterTrade: Double?,
+    val preTradeRationale: String,
+    val executionNotes: String,
+    val postTradeReview: String,
+    val tags: List<String>,
+    val screenshotUri: String?,
+    val percentagePnl: Double?,
+    val exitTimestamp: String?,
+    val entryClientTimestamp: String?,
+    val balanceUpdated: Boolean,
+    val leverage: Double? = null
+)
+
+fun formatCurrencyDetail(value: Double?, defaultText: String = "N/A"): String {
+    return value?.let { String.format(Locale.US, "$%.2f", it) } ?: defaultText
+}
+
+fun formatPercentage(value: Double?): String {
+    return value?.let { String.format(Locale.US, "%.2f%%", it) } ?: "N/A"
+}
+
+@Composable
+fun SectionTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+    )
+}
+
+@Composable
+fun InfoRow(label: String, value: String, valueColor: Color = MaterialTheme.colorScheme.onSurface) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium, modifier = Modifier.weight(0.45f))
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = valueColor, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(0.55f), textAlign = TextAlign.End)
+    }
+}
+// --- End of copied code ---
+
+// Helper to convert TradeHistoryItem to TradeDetailData for the dialog
+fun TradeHistoryItem.toTradeDetailData(): TradeDetailData {
+    return TradeDetailData(
+        id = this.id,
+        assetPair = this.assetPair,
+        assetClass = this.assetClass,
+        date = this.date, // This should be the primary date display for the trade
+        strategy = this.strategy ?: "N/A",
+        marketCondition = this.marketCondition,
+        positionType = this.positionType,
+        entryPrice = this.entryPrice,
+        stopLossPrice = this.stopLossPrice,
+        takeProfitPrice = this.takeProfitPrice,
+        outcome = this.outcome,
+        pnlAmount = this.pnl,
+        entryAmountUSD = this.entryAmountUSD,
+        balanceBeforeTrade = this.balanceBeforeTrade,
+        accountBalanceAfterTrade = this.accountBalanceAfterTrade,
+        preTradeRationale = this.preTradeRationale,
+        executionNotes = this.executionNotes,
+        postTradeReview = this.postTradeReview,
+        tags = this.tags,
+        screenshotUri = this.screenshotUri,
+        percentagePnl = this.percentagePnl,
+        exitTimestamp = this.exitTimestamp,
+        entryClientTimestamp = this.entryClientTimestamp,
+        balanceUpdated = this.balanceUpdated,
+        leverage = this.leverage
+    )
+}
+
+fun Trade.toTradeDetailData(id: String): TradeDetailData {
+    return TradeDetailData(
+        id = id,
+        assetPair = this.specificAsset ?: "N/A",
+        assetClass = this.assetClass ?: "N/A",
+        date = this.tradeDate?.toDate()?.let { java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(it) } ?: "N/A",
+        strategy = this.strategyUsed ?: "N/A",
+        marketCondition = this.marketCondition ?: "N/A",
+        positionType = this.positionType ?: "N/A",
+        entryPrice = this.entryPrice,
+        stopLossPrice = this.stopLossPrice,
+        takeProfitPrice = this.takeProfitPrice,
+        outcome = this.outcome ?: "N/A",
+        pnlAmount = this.pnlAmount,
+        entryAmountUSD = this.entryAmountUSD,
+        balanceBeforeTrade = this.balanceBeforeTrade,
+        accountBalanceAfterTrade = this.newBalanceAfterTrade,
+        preTradeRationale = this.preTradeRationale ?: "",
+        executionNotes = this.executionNotes ?: "",
+        postTradeReview = this.postTradeReview ?: "",
+        tags = this.tags ?: emptyList(),
+        screenshotUri = this.screenshotPath,
+        percentagePnl = this.percentagePnl,
+        exitTimestamp = this.exitTimestamp?.toDate()?.let { java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(it) },
+        entryClientTimestamp = this.entryClientTimestamp?.toDate()?.let { java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(it) },
+        balanceUpdated = this.balanceUpdated,
+        leverage = this.leverage
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TradeHistoryScreen(onTradeClick: (tradeId: String) -> Unit) {
+fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistoryViewModel = viewModel()) {
     var searchQuery by remember { mutableStateOf(TextFieldValue("")) }
     var showFilters by remember { mutableStateOf(false) }
+    var showDetailDialog by remember { mutableStateOf(false) }
+    var selectedTradeIdForDialog by remember { mutableStateOf<String?>(null) }
 
-    // Filter States
-    var selectedDateRange by remember { mutableStateOf(DEFAULT_FILTER_ALL) }
-    var selectedStrategy by remember { mutableStateOf(DEFAULT_FILTER_ALL) }
-    var selectedWinLoss by remember { mutableStateOf(DEFAULT_FILTER_ALL) } // "All", "Win", "Loss", "Break-Even"
-    var selectedBalanceImpact by remember { mutableStateOf(DEFAULT_FILTER_ANY) } // "Any", "Positive", "Negative"
+    val uiState by viewModel.uiState.collectAsState()
 
-    // Dummy data for preview
-    val allTrades = remember { listOf(
-        TradeHistoryItem("1", "EUR/USD", "2024-07-29", TradeOutcome.WIN, "Good entry based on RSI divergence and trendline support...", 150.75, "Scalping"),
-        TradeHistoryItem("2", "BTC/USD", "2024-07-28", TradeOutcome.LOSS, "Stop loss hit due to unexpected news spike. Market volatility was high.", -75.20, "Swing Trading"),
-        TradeHistoryItem("3", "AAPL", "2024-07-27", TradeOutcome.BREAK_EVEN, "Exited at entry, setup didn\'t play out as expected.", strategy = "Position Trading"),
-        TradeHistoryItem("4", "GBP/JPY", "2024-07-26", TradeOutcome.WIN, "Scalped a quick 20 pips on London open volatility.", 55.00, "Scalping"),
-        TradeHistoryItem("5", "ETH/USD", "2024-07-25", TradeOutcome.LOSS, "Market reversal, took a small loss.", -30.00, "Breakout")
-    )}
+    // Filtering and mapping
+    val trades: List<Pair<String, Trade>> = when (uiState) {
+        is TradeHistoryUiState.Success -> (uiState as TradeHistoryUiState.Success).trades
+        else -> emptyList()
+    }
+    val filteredTrades = trades.filter { (id, trade) ->
+        val asset = trade.specificAsset ?: ""
+        val strategy = trade.strategyUsed ?: ""
+        val outcome = trade.outcome ?: ""
+        searchQuery.text.isBlank() ||
+            asset.contains(searchQuery.text, ignoreCase = true) ||
+            strategy.contains(searchQuery.text, ignoreCase = true) ||
+            outcome.contains(searchQuery.text, ignoreCase = true)
+    }
 
-    var filteredTrades by remember { mutableStateOf(allTrades) }
-
-    fun applyFilters() {
-        filteredTrades = allTrades.filter { trade ->
-            val matchesSearch = searchQuery.text.isBlank() ||
-                    trade.pair.contains(searchQuery.text, ignoreCase = true) ||
-                    trade.descriptionSnippet.contains(searchQuery.text, ignoreCase = true)
-
-            val matchesDateRange = when (selectedDateRange) {
-                // TODO: Implement actual date range logic
-                "Today" -> false // Placeholder
-                "Last 7 Days" -> false // Placeholder
-                "Last 30 Days" -> false // Placeholder
-                else -> true // "All" or "Custom" (not yet handled for custom)
-            }
-
-            val matchesStrategy = selectedStrategy == DEFAULT_FILTER_ALL || trade.strategy == selectedStrategy
-
-            val matchesWinLoss = when (selectedWinLoss) {
-                "Win" -> trade.outcome == TradeOutcome.WIN
-                "Loss" -> trade.outcome == TradeOutcome.LOSS
-                "Break-Even" -> trade.outcome == TradeOutcome.BREAK_EVEN
-                else -> true // "All"
-            }
-
-            val matchesBalanceImpact = when (selectedBalanceImpact) {
-                "Positive" -> (trade.balanceChange ?: 0.0) > 0
-                "Negative" -> (trade.balanceChange ?: 0.0) < 0
-                else -> true // "Any"
-            }
-
-            matchesSearch && matchesDateRange && matchesStrategy && matchesWinLoss && matchesBalanceImpact
+    if (showDetailDialog && selectedTradeIdForDialog != null) {
+        val trade = trades.find { it.first == selectedTradeIdForDialog }?.second
+        if (trade != null) {
+            TradeDetailDialog(
+                tradeDetail = trade.toTradeDetailData(selectedTradeIdForDialog!!),
+                onDismissRequest = {
+                    showDetailDialog = false
+                    selectedTradeIdForDialog = null
+                }
+            )
         }
     }
-
-    // Apply filters whenever searchQuery or filter selections change (via Apply button)
-    // Initial application of filters
-    LaunchedEffect(Unit) { // Apply once on initial composition
-        applyFilters()
-    }
-
-    val dateRangeOptions = listOf(DEFAULT_FILTER_ALL, "Today", "Last 7 Days", "Last 30 Days", "Custom")
-    val strategyOptions = remember { listOf(DEFAULT_FILTER_ALL) + allTrades.map { it.strategy }.distinct().sorted() }
-    val winLossOptions = listOf(DEFAULT_FILTER_ALL, "Win", "Loss", "Break-Even")
-    val balanceImpactOptions = listOf(DEFAULT_FILTER_ANY, "Positive", "Negative")
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -122,54 +249,42 @@ fun TradeHistoryScreen(onTradeClick: (tradeId: String) -> Unit) {
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(16.dp))
-            SearchBar(searchQuery) { 
-                searchQuery = it 
-                // applyFilters() // Optionally apply filters on search query change immediately, or wait for Apply button
-            }
+            SearchBar(searchQuery) { searchQuery = it }
             Spacer(modifier = Modifier.height(8.dp))
-            FilterSection(
-                showFilters = showFilters,
-                onShowFiltersToggle = { showFilters = !showFilters },
-                selectedDateRange = selectedDateRange,
-                dateRangeOptions = dateRangeOptions,
-                onDateRangeSelected = { selectedDateRange = it },
-                selectedStrategy = selectedStrategy,
-                strategyOptions = strategyOptions,
-                onStrategySelected = { selectedStrategy = it },
-                selectedWinLoss = selectedWinLoss,
-                winLossOptions = winLossOptions,
-                onWinLossSelected = { selectedWinLoss = it },
-                selectedBalanceImpact = selectedBalanceImpact,
-                balanceImpactOptions = balanceImpactOptions,
-                onBalanceImpactSelected = { selectedBalanceImpact = it },
-                onResetFilters = {
-                    selectedDateRange = DEFAULT_FILTER_ALL
-                    selectedStrategy = DEFAULT_FILTER_ALL
-                    selectedWinLoss = DEFAULT_FILTER_ALL
-                    selectedBalanceImpact = DEFAULT_FILTER_ANY
-                    searchQuery = TextFieldValue("") // Also reset search query
-                    applyFilters()
-                },
-                onApplyFilters = {
-                    applyFilters()
-                    showFilters = false // Optionally close filter section after applying
-                }
-            )
+            // TODO: Add filter section if needed
             Spacer(modifier = Modifier.height(16.dp))
-            if (filteredTrades.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No trades match your criteria.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            when (uiState) {
+                is TradeHistoryUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                        Text("Loading trades...", modifier = Modifier.padding(top = 60.dp))
+                    }
                 }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(filteredTrades, key = { it.id }) { trade ->
-                        TradeCard(tradeItem = trade, onClick = { onTradeClick(trade.id) })
+                is TradeHistoryUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text((uiState as TradeHistoryUiState.Error).message, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                is TradeHistoryUiState.Success -> {
+                    if (filteredTrades.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No trades match your criteria.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(filteredTrades, key = { it.first }) { (tradeId, trade) ->
+                                TradeCard(tradeId = tradeId, trade = trade, onClick = {
+                                    selectedTradeIdForDialog = tradeId
+                                    showDetailDialog = true
+                                })
+                            }
+                        }
                     }
                 }
             }
@@ -183,7 +298,7 @@ fun SearchBar(query: TextFieldValue, onQueryChange: (TextFieldValue) -> Unit) {
         value = query,
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
-        label = { Text("Search Trades (e.g., EUR/USD, keyword)") },
+        label = { Text("Search Trades (e.g., EUR/USD, Win, Scalping)") },
         leadingIcon = {
             Icon(Icons.Filled.Search, contentDescription = "Search Icon")
         },
@@ -333,7 +448,7 @@ fun FilterSection(
 }
 
 @Composable
-fun TradeCard(tradeItem: TradeHistoryItem, onClick: () -> Unit) {
+fun TradeCard(tradeId: String, trade: Trade, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -354,10 +469,11 @@ fun TradeCard(tradeItem: TradeHistoryItem, onClick: () -> Unit) {
                     .size(10.dp)
                     .clip(CircleShape)
                     .background(
-                        when (tradeItem.outcome) {
-                            TradeOutcome.WIN -> Color(0xFF26A69A) // TradingView Green
-                            TradeOutcome.LOSS -> Color(0xFFEF5350) // TradingView Red
-                            TradeOutcome.BREAK_EVEN -> MaterialTheme.colorScheme.outline
+                        when (trade.outcome) {
+                            "Win" -> Color(0xFF26A69A)
+                            "Loss" -> Color(0xFFEF5350)
+                            "Breakeven" -> MaterialTheme.colorScheme.outline
+                            else -> MaterialTheme.colorScheme.outline
                         }
                     )
             )
@@ -367,14 +483,14 @@ fun TradeCard(tradeItem: TradeHistoryItem, onClick: () -> Unit) {
             // Trade Info Column
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "${tradeItem.pair} - ${tradeItem.date}",
+                    text = "${trade.specificAsset ?: "N/A"} - " + (trade.tradeDate?.toDate()?.let { java.text.SimpleDateFormat("yyyy-MM-dd").format(it) } ?: "N/A"),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = tradeItem.descriptionSnippet,
+                    text = trade.strategyUsed ?: "",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
@@ -383,14 +499,223 @@ fun TradeCard(tradeItem: TradeHistoryItem, onClick: () -> Unit) {
             }
 
             // Balance Change Icon (Optional)
-            tradeItem.balanceChange?.let { balance ->
-                Spacer(modifier = Modifier.width(12.dp))
+            val pnl = trade.pnlAmount ?: 0.0
+            Spacer(modifier = Modifier.width(12.dp))
+            Icon(
+                imageVector = if (pnl >= 0) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
+                contentDescription = if (pnl >= 0) "Positive Balance Change" else "Negative Balance Change",
+                tint = if (pnl >= 0) Color(0xFF26A69A) else Color(0xFFEF5350),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TradeScreenshotDisplay(screenshotUri: String?) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            if (screenshotUri != null && screenshotUri.isNotBlank()) {
+                Text("Screenshot Preview (URI: $screenshotUri)", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp))
+            } else {
                 Icon(
-                    imageVector = if (balance >= 0) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
-                    contentDescription = if (balance >= 0) "Positive Balance Change" else "Negative Balance Change",
-                    tint = if (balance >= 0) Color(0xFF26A69A) else Color(0xFFEF5350),
-                    modifier = Modifier.size(20.dp)
+                    imageVector = Icons.Filled.MoreVert, // Placeholder icon, replace with image loader if needed
+                    contentDescription = "No Screenshot Available",
+                    modifier = Modifier.size(80.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TradeInfoSection(details: TradeDetailData) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            InfoRow("Asset Pair:", details.assetPair)
+            InfoRow("Asset Class:", details.assetClass)
+            InfoRow("Date & Time:", details.date)
+            InfoRow("Strategy:", details.strategy)
+            InfoRow("Market Condition:", details.marketCondition)
+            InfoRow("Position Type:", details.positionType, valueColor = if(details.positionType.equals("Long", true)) Color(0xFF26A69A) else Color(0xFFEF5350))
+            Divider(modifier = Modifier.padding(vertical = 6.dp))
+            Text("Financials", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            InfoRow("Entry Price:", formatCurrencyDetail(details.entryPrice))
+            InfoRow("Stop-Loss:", formatCurrencyDetail(details.stopLossPrice))
+            InfoRow("Take-Profit:", formatCurrencyDetail(details.takeProfitPrice, defaultText = "Not Set"))
+            InfoRow("Entry Amount (USD):", formatCurrencyDetail(details.entryAmountUSD))
+            details.leverage?.let { InfoRow("Leverage:", "${it}x") }
+            InfoRow("P&L Amount:", formatCurrencyDetail(details.pnlAmount), valueColor = if((details.pnlAmount ?: 0.0) >= 0) Color(0xFF26A69A) else Color(0xFFEF5350))
+            InfoRow("P&L Percentage:", formatPercentage(details.percentagePnl), valueColor = if((details.percentagePnl ?: 0.0) >= 0) Color(0xFF26A69A) else Color(0xFFEF5350))
+            InfoRow("Outcome:", details.outcome, valueColor = when(details.outcome.lowercase()) {
+                "win" -> Color(0xFF26A69A)
+                "loss" -> Color(0xFFEF5350)
+                else -> MaterialTheme.colorScheme.onSurface
+            })
+            InfoRow("Balance Before Trade:", formatCurrencyDetail(details.balanceBeforeTrade))
+            if(details.balanceUpdated) {
+                InfoRow("Updated Account Balance:", formatCurrencyDetail(details.accountBalanceAfterTrade))
+            } else {
+                InfoRow("Account Balance After:", formatCurrencyDetail(details.accountBalanceAfterTrade, defaultText = "Not Updated by this trade"))
+            }
+        }
+    }
+}
+
+@Composable
+private fun RRMetricsSection(entry: Double?, sl: Double?, tp: Double?, pnl: Double?, positionType: String) {
+    val riskAmount = if (entry != null && sl != null) kotlin.math.abs(entry - sl) else null
+    val plannedRR = if (tp != null && entry != null && riskAmount != null && riskAmount != 0.0) {
+        val rewardAmount = kotlin.math.abs(tp - entry)
+        String.format("%.2f : 1", rewardAmount / riskAmount)
+    } else { "N/A" }
+    val actualRR = if (pnl != null && riskAmount != null && riskAmount != 0.0) {
+        String.format("%.2f : 1", (kotlin.math.abs(pnl) / riskAmount) * (if (pnl >= 0) 1 else -1))
+    } else { "N/A" }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            InfoRow("Planned R:R Ratio:", plannedRR)
+            InfoRow("Actual R:R Achieved:", actualRR)
+        }
+    }
+}
+
+@Composable
+private fun PerformanceDetailsSection(details: TradeDetailData) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            InfoRow("Percentage P&L:", formatPercentage(details.percentagePnl), valueColor = if((details.percentagePnl ?: 0.0) >= 0) Color(0xFF26A69A) else Color(0xFFEF5350))
+        }
+    }
+}
+
+@Composable
+private fun TimestampsSection(details: TradeDetailData) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            InfoRow("Entry Timestamp (Client):", details.entryClientTimestamp ?: "N/A")
+            InfoRow("Exit Timestamp (Approx.):", details.exitTimestamp ?: "N/A")
+        }
+    }
+}
+
+@Composable
+private fun NotesSection(title: String, content: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
+            Text(
+                text = content.ifBlank { "No notes provided." },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun TagsSection(tags: List<String>) {
+    if (tags.isNotEmpty()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+            Text("Tags", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                tags.take(5).forEach { tag ->
+                    Text(
+                        text = "#$tag",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 3.dp)
+                    )
+                }
+                if (tags.size > 5) {
+                    Text("...", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TradeDetailDialog(tradeDetail: TradeDetailData, onDismissRequest: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismissRequest) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.9f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    "Trade Details: ${tradeDetail.assetPair}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item { TradeScreenshotDisplay(tradeDetail.screenshotUri) }
+                    item { SectionTitle("Trade Overview") }
+                    item { TradeInfoSection(tradeDetail) }
+                    item { SectionTitle("Performance Metrics") }
+                    item {
+                        RRMetricsSection(
+                            entry = tradeDetail.entryPrice,
+                            sl = tradeDetail.stopLossPrice,
+                            tp = tradeDetail.takeProfitPrice,
+                            pnl = tradeDetail.pnlAmount,
+                            positionType = tradeDetail.positionType
+                        )
+                    }
+                    item { PerformanceDetailsSection(tradeDetail) }
+                    item { SectionTitle("Trade Journal") }
+                    item { NotesSection("Pre-Trade Rationale / Setup", tradeDetail.preTradeRationale) }
+                    item { NotesSection("Execution Notes", tradeDetail.executionNotes) }
+                    item { NotesSection("Post-Trade Review / Lessons Learned", tradeDetail.postTradeReview) }
+                    item { SectionTitle("Additional Info") }
+                    item { TimestampsSection(tradeDetail) }
+                    item { TagsSection(tradeDetail.tags) }
+                    item { Spacer(modifier = Modifier.height(72.dp)) }
+                }
+                Button(
+                    onClick = onDismissRequest,
+                    modifier = Modifier.align(Alignment.End).padding(top = 16.dp)
+                ) {
+                    Text("Close")
+                }
             }
         }
     }
@@ -400,16 +725,18 @@ fun TradeCard(tradeItem: TradeHistoryItem, onClick: () -> Unit) {
 @Preview(showBackground = true, name = "Trade History Screen - Light")
 @Composable
 fun TradeHistoryScreenPreviewLight() {
+    val context = androidx.compose.ui.platform.LocalContext.current
     ProfitPathTheme(darkTheme = false) {
-        TradeHistoryScreen(onTradeClick = {})
+        TradeHistoryScreen(navController = NavHostController(context))
     }
 }
 
 @Preview(showBackground = true, name = "Trade History Screen - Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun TradeHistoryScreenPreviewDark() {
+    val context = androidx.compose.ui.platform.LocalContext.current
     ProfitPathTheme(darkTheme = true) {
-        TradeHistoryScreen(onTradeClick = {})
+        TradeHistoryScreen(navController = NavHostController(context))
     }
 }
 
@@ -456,7 +783,13 @@ fun FilterSectionPreviewExpanded() {
 fun TradeCardWinPreview() {
     ProfitPathTheme {
         TradeCard(
-            tradeItem = TradeHistoryItem("1", "EUR/USD", "2024-07-29", TradeOutcome.WIN, "Good entry based on RSI.", 150.0, "Scalping"),
+            tradeId = "1",
+            trade = Trade(
+                specificAsset = "EUR/USD",
+                outcome = "Win",
+                pnlAmount = 150.0,
+                strategyUsed = "Scalping"
+            ),
             onClick = {}
         )
     }
@@ -467,7 +800,13 @@ fun TradeCardWinPreview() {
 fun TradeCardLossPreview() {
     ProfitPathTheme {
         TradeCard(
-            tradeItem = TradeHistoryItem("2", "BTC/USD", "2024-07-28", TradeOutcome.LOSS, "Stop loss hit due to news.", -75.0, "Swing Trading"),
+            tradeId = "2",
+            trade = Trade(
+                specificAsset = "GBP/JPY",
+                outcome = "Loss",
+                pnlAmount = -75.5,
+                strategyUsed = "Trend Following"
+            ),
             onClick = {}
         )
     }
@@ -478,8 +817,54 @@ fun TradeCardLossPreview() {
 fun TradeCardBreakEvenNoBalancePreview() {
     ProfitPathTheme {
         TradeCard(
-            tradeItem = TradeHistoryItem("3", "AAPL", "2024-07-27", TradeOutcome.BREAK_EVEN, "Exited at entry, setup didn\'t play out as expected.", strategy = "News Trading"),
+            tradeId = "3",
+            trade = Trade(
+                specificAsset = "AUD/CAD",
+                outcome = "Breakeven",
+                pnlAmount = 0.0,
+                strategyUsed = "Range Trading"
+            ),
             onClick = {}
         )
+    }
+}
+
+@Preview(showBackground = true, name = "Trade Detail Dialog - Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun TradeDetailDialogPreview() {
+    ProfitPathTheme(darkTheme = true) {
+        // Directly show the dialog with a sample item for preview
+         Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center){ // Simulate dialog overlay
+            TradeDetailDialog(
+                tradeDetail = TradeDetailData(
+                    id = "1",
+                    assetPair = "EUR/USD",
+                    assetClass = "Forex",
+                    date = "2023-10-27",
+                    strategy = "Scalping",
+                    marketCondition = "Trending",
+                    positionType = "Long",
+                    entryPrice = 1.2345,
+                    stopLossPrice = 1.2300,
+                    takeProfitPrice = 1.2400,
+                    outcome = "Win",
+                    pnlAmount = 150.0,
+                    entryAmountUSD = 1000.0,
+                    balanceBeforeTrade = 10000.0,
+                    accountBalanceAfterTrade = 10050.0,
+                    preTradeRationale = "Price broke above resistance.",
+                    executionNotes = "Slight slippage on entry.",
+                    postTradeReview = "Should have held longer.",
+                    tags = listOf("Breakout", "EURUSD"),
+                    screenshotUri = "content://media/external/images/media/12345",
+                    percentagePnl = 5.0,
+                    exitTimestamp = "2023-10-27 10:30",
+                    entryClientTimestamp = "2023-10-27 09:00",
+                    balanceUpdated = true,
+                    leverage = 50.0
+                ),
+                onDismissRequest = {}
+            )
+        }
     }
 } 

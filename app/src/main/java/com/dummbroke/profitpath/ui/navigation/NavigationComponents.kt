@@ -59,7 +59,7 @@ sealed class Screen(
     object Home : Screen("home", "Home", NavDrawables.ic_nav_home)
     object TradeEntry : Screen("trade_entry", "New Trade Entry", NavDrawables.ic_nav_trade_entry)
     object TradeHistory : Screen("trade_history", "History", NavDrawables.ic_nav_history)
-    object SingleTradeView : Screen("single_trade_view", "Trade View", NavDrawables.ic_nav_single_trade_view)
+    object SingleTradeView : Screen("trade_detail_view", "Trade View", NavDrawables.ic_nav_single_trade_view)
     object PerformanceSummary : Screen("performance_summary", "Performance", NavDrawables.ic_nav_performance)
     object Settings : Screen("settings", "Settings", NavDrawables.ic_nav_settings)
 }
@@ -73,7 +73,6 @@ val bottomNavItems = listOf(
 // Define items for the Navigation Drawer
 val drawerNavItems = listOf(
     Screen.PerformanceSummary,
-    Screen.SingleTradeView,
     Screen.Settings
 )
 

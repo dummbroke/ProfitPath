@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.google.firebase.Timestamp
 
 // Define a UI state class
 sealed interface TradeEntryUiState {
@@ -89,20 +90,27 @@ class TradeEntryViewModel(application: Application) : AndroidViewModel(applicati
                     return@launch
                 }
 
-                val tradeDateMillis = try {
-                    // Assuming tradeDateStr is "yyyy-MM-dd" from a DatePicker
-                    // Adjust format if it's different
-                    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    sdf.parse(tradeDateStr)?.time
-                } catch (e: Exception) {
-                    null // Handle invalid date format
+                // --- Timestamp Handling ---
+                fun parseDateToTimestamp(dateStr: String): Timestamp? {
+                    return try {
+                        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        val date = sdf.parse(dateStr)
+                        date?.let { Timestamp(it) }
+                    } catch (e: Exception) {
+                        null
+                    }
                 }
 
-                if (tradeDateMillis == null && tradeDateStr != "Select Date" && tradeDateStr.isNotBlank()){
-                     _uiState.value = TradeEntryUiState.Error("Invalid trade date format.")
+                val tradeDateTimestamp = if (tradeDateStr != "Select Date" && tradeDateStr.isNotBlank()) {
+                    parseDateToTimestamp(tradeDateStr)
+                } else {
+                    Timestamp.now()
+                }
+
+                if (tradeDateTimestamp == null) {
+                    _uiState.value = TradeEntryUiState.Error("Invalid trade date format.")
                     return@launch
                 }
-
 
                 val tagsList = if (tagsStr.isNotBlank()) {
                     tagsStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
@@ -123,7 +131,7 @@ class TradeEntryViewModel(application: Application) : AndroidViewModel(applicati
                     null // Cannot calculate if P&L or entry amount is missing or entry amount is zero
                 }
 
-                val currentTimestamp = System.currentTimeMillis()
+                val nowTimestamp = Timestamp.now()
 
                 val trade = Trade(
                     assetClass = assetClass,
@@ -135,7 +143,7 @@ class TradeEntryViewModel(application: Application) : AndroidViewModel(applicati
                     stopLossPrice = stopLossPrice,
                     takeProfitPrice = takeProfitPrice,
                     outcome = outcome,
-                    tradeDate = tradeDateMillis ?: currentTimestamp, // Fallback to current time if date is not set
+                    tradeDate = tradeDateTimestamp,
                     pnlAmount = pnlAmount,
                     preTradeRationale = preTradeRationale,
                     executionNotes = executionNotes,
@@ -144,14 +152,14 @@ class TradeEntryViewModel(application: Application) : AndroidViewModel(applicati
                     // screenshotPath will be set by repository
                     balanceUpdated = balanceShouldBeUpdated,
                     newBalanceAfterTrade = newBalance,
-                    entryClientTimestamp = currentTimestamp, // Capture client time for entry
+                    entryClientTimestamp = nowTimestamp, // Capture client time for entry
                     // userId and server timestamps will be set by repository/Firestore
 
                     // Updated fields for Trade object
                     entryAmountUSD = entryAmountUSD,
                     balanceBeforeTrade = balanceBeforeTrade,
                     percentagePnl = percentagePnl,
-                    exitTimestamp = currentTimestamp // Trade is saved/exited now
+                    exitTimestamp = nowTimestamp // Trade is saved/exited now
                 )
 
                 val result = repository.saveTrade(trade, selectedImageUri)
