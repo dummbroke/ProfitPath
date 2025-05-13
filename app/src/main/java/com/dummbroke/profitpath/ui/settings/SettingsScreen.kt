@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -60,6 +62,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dummbroke.profitpath.R
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.verticalScroll
 
 // --- Data Models (if needed, for complex settings) ---
 data class TradingStyleOption(val id: String, val displayName: String)
@@ -111,6 +114,9 @@ fun SettingsScreen(
 
     val showChangePasswordDialog by settingsViewModel.showChangePasswordDialog.collectAsState()
     val changePasswordResult by settingsViewModel.changePasswordResult.collectAsState()
+
+    var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
+    var showTermsDialog by remember { mutableStateOf(false) }
 
     // Show feedback as Snackbar (for password change too)
     LaunchedEffect(operationFeedback, changePasswordResult) {
@@ -210,8 +216,8 @@ fun SettingsScreen(
         item {
             SettingsSectionTitle("Application Information & Support")
             SettingItem(iconRes = R.drawable.ic_settings_app_info_placeholder, title = "App Version", subtitle = appVersion)
-            SettingItem(iconRes = R.drawable.ic_settings_privacy_policy_placeholder, title = "Privacy Policy", isClickable = true, onClick = { /* TODO: Open URL */ }) {}
-            SettingItem(iconRes = R.drawable.ic_settings_terms_service_placeholder, title = "Terms of Service", isClickable = true, onClick = { /* TODO: Open URL */ }) {}
+            SettingItem(iconRes = R.drawable.ic_settings_privacy_policy_placeholder, title = "Privacy Policy", isClickable = true, onClick = { showPrivacyPolicyDialog = true }) {}
+            SettingItem(iconRes = R.drawable.ic_settings_terms_service_placeholder, title = "Terms of Service", isClickable = true, onClick = { showTermsDialog = true }) {}
             SettingItem(iconRes = R.drawable.ic_settings_send_feedback_placeholder, title = "Send Feedback", isClickable = true, onClick = { /* TODO: Open Email/Form */ }) {}
             SettingItem(iconRes = R.drawable.ic_settings_rate_app_placeholder, title = "Rate App", isClickable = true, onClick = { /* TODO: Open Play Store */ }) {}
         }
@@ -263,7 +269,67 @@ fun SettingsScreen(
                 }
                 // else handled in dialog
             },
-            onDismiss = { settingsViewModel.clearChangePasswordResult(); settingsViewModel.clearOperationFeedback() }
+            onDismiss = { settingsViewModel.dismissChangePasswordDialog() }
+        )
+    }
+
+    if (showPrivacyPolicyDialog) {
+        InfoDialogContent(
+            title = "Privacy Policy",
+            sections = listOf(
+                "Effective Date: [May 15, 2025]" to null,
+                "Last Updated: [May 15, 2025]" to null,
+                "1. Introduction" to "Welcome to Profit Path! Your privacy is important to us. This Privacy Policy explains how we collect, use, and protect your information when using our trading journal application. By using Profit Path, you consent to the practices described here.",
+                "2. Information We Collect" to null,
+                null to "• Personal Information: Name, trading style, and profile settings.",
+                null to "• Trading Data: Trade entries, performance statistics, and descriptions.",
+                null to "• Images: Screenshots saved locally on your device.",
+                null to "• Analytics Data: Usage patterns to improve app performance.",
+                "3. How We Use Your Information" to null,
+                null to "✔ Store and manage your trading journal securely.",
+                null to "✔ Improve app functionality and user experience.",
+                null to "✔ Provide analytics for your trading performance.",
+                null to "✔ Sync data with Firebase Firestore (excluding images).",
+                "4. Data Storage & Security" to null,
+                null to "• Text-based trade data is stored in Firebase Firestore.",
+                null to "• Screenshots remain on your local device storage.",
+                null to "• We do not share or sell your data to third parties.",
+                "5. Your Choices & Rights" to null,
+                null to "✔ Access, edit, or delete your trade entries.",
+                null to "✔ Opt-out of analytics tracking.",
+                null to "✔ Export data for personal backups.",
+                "6. Changes to This Policy" to "We may update this Privacy Policy. You'll be notified of significant changes.",
+                "7. Contact Us" to "For any questions, reach out to ProfitPath0215@gmail.com."
+            ),
+            onDismiss = { showPrivacyPolicyDialog = false }
+        )
+    }
+
+    if (showTermsDialog) {
+        InfoDialogContent(
+            title = "Terms of Service",
+            sections = listOf(
+                "Effective Date: [May 15, 2025]" to null,
+                "Last Updated: [May 15, 2025]" to null,
+                "1. Acceptance of Terms" to "By using Profit Path, you agree to these Terms of Service. If you do not agree, please do not use the app.",
+                "2. User Responsibilities" to null,
+                null to "✔ You are responsible for your trade entries and saved data.",
+                null to "✔ You must comply with applicable laws while using Profit Path.",
+                null to "✔ Do not attempt to misuse, reverse-engineer, or exploit app features.",
+                "3. Data Ownership & Usage" to null,
+                null to "• You retain full ownership of your trade data.",
+                null to "• We do not sell or share your personal information.",
+                null to "• Firebase Firestore only stores text-based trade details.",
+                "4. Disclaimer & Limitation of Liability" to null,
+                null to "✔ Profit Path does not provide financial advice.",
+                null to "✔ We are not responsible for trading losses based on recorded journal data.",
+                null to "✔ The app is provided 'as-is', and we do not guarantee uninterrupted service.",
+                "5. Termination & Modifications" to null,
+                null to "✔ Modify or update the app at any time.",
+                null to "✔ Suspend or restrict accounts violating our Terms of Service.",
+                "6. Contact Information" to "For questions or concerns, contact ProfitPath0215@gmail.com."
+            ),
+            onDismiss = { showTermsDialog = false }
         )
     }
 
@@ -499,6 +565,7 @@ fun TradingStyleSelectionDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangePasswordDialog(
     onConfirm: (String, String, String) -> Unit,
@@ -566,6 +633,45 @@ fun ChangePasswordDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun InfoDialogContent(title: String, sections: List<Pair<String?, String?>>, onDismiss: () -> Unit) {
+    BasicAlertDialog(
+        onDismissRequest = onDismiss,
+        content = {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    Modifier
+                        .padding(24.dp)
+                        .verticalScroll(rememberScrollState())
+                        .widthIn(max = 400.dp)
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(16.dp))
+                    for ((header, body) in sections) {
+                        if (header != null) {
+                            Text(header, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        }
+                        if (body != null) {
+                            Text(body, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 8.dp, top = 2.dp, bottom = 8.dp))
+                        }
+                        if (header != null || body != null) {
+                            Spacer(Modifier.height(4.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = onDismiss) { Text("Close") }
+                    }
+                }
+            }
+        }
+    )
+}
+
 // --- Previews ---
 @Preview(showBackground = true, name = "Settings Screen Light")
 @Composable
@@ -620,26 +726,3 @@ fun TradingStyleDialogPreview() {
         }
     }
 }
-
-// Placeholder for the save icon, create this drawable resource
-// e.g., res/drawable/ic_save_check_placeholder.xml
-// <vector xmlns:android="http://schemas.android.com/apk/res/android"
-//     android:width="24dp"
-//     android:height="24dp"
-//     android:viewportWidth="24"
-//     android:viewportHeight="24"
-//     android:tint="?attr/colorControlNormal">
-//   <path
-//       android:fillColor="@android:color/white"
-//       android:pathData="M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z"/>
-// </vector>
-// For now, you might need to use a built-in icon or temporarily remove the icon if it causes build errors.
-// Consider using Icons.Filled.Check or Icons.Filled.Done if available and appropriate.
-// For the preview, I used painterResource(id = R.drawable.ic_save_check_placeholder)
-// You'll need to add an actual drawable resource with this name.
-// A simple checkmark icon would suffice.
-// Example: R.drawable.ic_settings_save_placeholder
-// Or ensure you have a generic save or check icon.
-// For the purpose of this edit, I will assume a placeholder `R.drawable.ic_save_check_placeholder` exists.
-// If not, please replace `R.drawable.ic_save_check_placeholder` in `EditableSettingItem` with a valid drawable.
- 

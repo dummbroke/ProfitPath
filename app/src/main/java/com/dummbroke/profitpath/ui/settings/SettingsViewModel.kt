@@ -179,4 +179,10 @@ class SettingsViewModel(
     fun clearChangePasswordResult() {
         _changePasswordResult.value = null
     }
+
+    fun dismissChangePasswordDialog() {
+        _showChangePasswordDialog.value = false
+        clearChangePasswordResult()
+        clearOperationFeedback()
+    }
 } 
