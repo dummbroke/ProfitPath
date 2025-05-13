@@ -46,6 +46,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.dummbroke.profitpath.ui.trade_asset.TradeAssetViewModel
+import com.dummbroke.profitpath.ui.trade_asset.Asset
+import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -158,6 +161,13 @@ fun TradeEntryScreen(
         }
     }
 
+    val assetViewModel: TradeAssetViewModel = viewModel()
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val userAssets by assetViewModel.assets.collectAsState()
+    LaunchedEffect(userId) {
+        if (userId.isNotBlank()) assetViewModel.fetchAssets(userId)
+    }
+
     LaunchedEffect(uiState) {
         when (val state = uiState) {
             is TradeEntryUiState.Success -> {
@@ -194,9 +204,7 @@ fun TradeEntryScreen(
                 SpecificAssetSelector(
                     assetClass = selectedAssetClass,
                     currentValue = specificAsset,
-                    forexAssets = listOf("EUR/USD", "GBP/USD", "USD/JPY"),
-                    stockAssets = listOf("AAPL", "MSFT", "GOOGL"),
-                    cryptoAssets = listOf("BTC/USD", "ETH/USD", "ADA/USD"),
+                    userAssets = userAssets,
                     onValueChange = { specificAsset = it }
                 )
             }
@@ -381,19 +389,12 @@ fun AssetClassSelector(
 fun SpecificAssetSelector(
     assetClass: String,
     currentValue: String,
-    forexAssets: List<String>,
-    stockAssets: List<String>,
-    cryptoAssets: List<String>,
+    userAssets: List<Asset> = emptyList(),
     onValueChange: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val assetsToShow = when (assetClass) {
-        "Forex" -> forexAssets
-        "Stocks" -> stockAssets
-        "Crypto" -> cryptoAssets
-        else -> emptyList()
-    }
-
+    val filteredUserAssets = userAssets.filter { it.type.equals(assetClass, ignoreCase = true) }
+    val assetsToShow = filteredUserAssets.map { it.name }.distinct()
     if (assetsToShow.isNotEmpty()) {
         ExposedDropdownMenuBox(
             expanded = expanded,
@@ -403,7 +404,7 @@ fun SpecificAssetSelector(
                 value = currentValue,
                 onValueChange = onValueChange,
                 readOnly = assetsToShow.isNotEmpty(),
-                label = { Text("Specific Asset (e.g., EUR/USD, AAPL, BTC/USD)") },
+                label = { Text("Select Asset") },
                 trailingIcon = { if(assetsToShow.isNotEmpty()) ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
                     .menuAnchor()
@@ -412,7 +413,7 @@ fun SpecificAssetSelector(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 ),
-                placeholder = { Text("Type or select asset") }
+                placeholder = { Text("") }
             )
             if (assetsToShow.isNotEmpty()){
                 ExposedDropdownMenu(
@@ -435,13 +436,13 @@ fun SpecificAssetSelector(
          OutlinedTextField(
             value = currentValue,
             onValueChange = onValueChange,
-            label = { Text("Specific Asset") },
+            label = { Text("Select Asset") },
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outline
             ),
-            placeholder = { Text("Enter asset symbol") }
+            placeholder = { Text("") }
         )
     }
 }

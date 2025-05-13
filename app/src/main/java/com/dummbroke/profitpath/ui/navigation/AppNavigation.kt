@@ -1,13 +1,11 @@
 package com.dummbroke.profitpath.ui.navigation
 
-import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +27,6 @@ import com.dummbroke.profitpath.ui.auth.SignUpScreen
 import com.dummbroke.profitpath.ui.home.HomeScreen
 import com.dummbroke.profitpath.ui.performance.PerformanceScreen
 import com.dummbroke.profitpath.ui.settings.SettingsScreen
-import com.dummbroke.profitpath.ui.trade_detail.TradeDetailScreen
 import com.dummbroke.profitpath.ui.trade_entry.TradeEntryScreen
 import com.dummbroke.profitpath.ui.trade_history.TradeHistoryScreen
 import com.dummbroke.profitpath.ui.settings.SettingsViewModel
@@ -90,23 +87,18 @@ fun AppNavigation(authViewModel: AuthViewModel = viewModel()) {
         Screen.TradeHistory.route -> Screen.TradeHistory.title
         Screen.PerformanceSummary.route -> Screen.PerformanceSummary.title
         Screen.Settings.route -> Screen.Settings.title
-        else -> if (currentRoute?.startsWith(Screen.SingleTradeView.route + "/") == true) Screen.SingleTradeView.title else "ProfitPath"
+        Screen.TradeAsset.route -> Screen.TradeAsset.title
+        else -> "ProfitPath"
     }
 
     val showTopAndBottomBars = currentUser != null && 
         (bottomNavItems.any { it.route == currentRoute } || 
-         drawerNavItems.any { it.route == currentRoute } || 
-         currentRoute?.startsWith(Screen.SingleTradeView.route) == true)
+         drawerNavItems.any { it.route == currentRoute })
 
     val showBackButton = showTopAndBottomBars && when (currentRoute) {
         Screen.PerformanceSummary.route,
-        Screen.Settings.route,
-        Screen.SingleTradeView.route -> navController.previousBackStackEntry != null
-        else -> if (currentRoute?.startsWith(Screen.SingleTradeView.route + "/") == true) {
-            navController.previousBackStackEntry != null
-        } else {
-            false
-        }
+        Screen.Settings.route -> navController.previousBackStackEntry != null
+        else -> false
     }
 
     val onLogoutConfirmed = {
@@ -192,18 +184,13 @@ fun MainAppScaffold(
         Screen.TradeHistory.route -> Screen.TradeHistory.title
         Screen.PerformanceSummary.route -> Screen.PerformanceSummary.title
         Screen.Settings.route -> Screen.Settings.title
-        else -> if (nestedCurrentRoute?.startsWith(Screen.SingleTradeView.route + "/") == true) Screen.SingleTradeView.title else "ProfitPath"
+        else -> "ProfitPath"
     }
 
     val actualShowBackButton = when (nestedCurrentRoute) {
         Screen.PerformanceSummary.route,
-        Screen.Settings.route,
-        Screen.SingleTradeView.route -> mainAppNavController.previousBackStackEntry != null
-        else -> if (nestedCurrentRoute?.startsWith(Screen.SingleTradeView.route + "/") == true) {
-            mainAppNavController.previousBackStackEntry != null // Use new NavController
-        } else {
-            false
-        }
+        Screen.Settings.route -> mainAppNavController.previousBackStackEntry != null
+        else -> false
     }
     val showBottomNav = bottomNavItems.any { it.route == nestedCurrentRoute }
 
@@ -288,21 +275,10 @@ fun MainAppScaffold(
                 composable(Screen.Settings.route) {
                     SettingsScreen(settingsViewModel = settingsViewModel)
                 }
-                // Define the route WITH {tradeId} parameter FIRST
-                composable(
-                    route = "${Screen.SingleTradeView.route}/{tradeId}",
-                    arguments = listOf(navArgument("tradeId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val tradeId = backStackEntry.arguments?.getString("tradeId")
-                    Log.d("AppNavigation", "PARAM ROUTE ('${Screen.SingleTradeView.route}/{tradeId}'): tradeId='$tradeId'")
-                    TradeDetailScreen(navController = mainAppNavController, tradeId = tradeId)
+                composable(Screen.TradeAsset.route) {
+                    com.dummbroke.profitpath.ui.trade_asset.TradeAssetScreen()
                 }
-                // Non-parameterized route is currently commented out to ensure the above is hit.
-                // If needed later for direct access without an ID, add it back carefully with a distinct route name.
-                // composable(Screen.SingleTradeView.route + "_no_id") { // Example: "trade_detail_view_no_id"
-                //     Log.d("AppNavigation", "Composable for SingleTradeView (no ID) invoked")
-                //     TradeDetailScreen(navController = mainAppNavController, tradeId = null)
-                // }
+                // Removed SingleTradeView navigation
             }
         }
     }

@@ -79,8 +79,8 @@ enum class TradeOutcome {
 const val DEFAULT_FILTER_ALL = "All"
 const val DEFAULT_FILTER_ANY = "Any"
 
-// --- Copied from TradeDetailScreen.kt ---
-data class TradeDetailData( // This will be used by the Dialog, populated from TradeHistoryItem
+
+data class TradeDetailData(
     val id: String,
     val assetPair: String,
     val assetClass: String,

@@ -46,9 +46,9 @@ object NavDrawables {
     val ic_nav_home = R.drawable.ic_nav_home_placeholder // Replace with actual R.drawable.your_icon
     val ic_nav_trade_entry = R.drawable.ic_nav_trade_entry_placeholder
     val ic_nav_history = R.drawable.ic_nav_history_placeholder
-    val ic_nav_single_trade_view = R.drawable.ic_nav_single_trade_view_placeholder
     val ic_nav_performance = R.drawable.ic_nav_performance_placeholder
     val ic_nav_settings = R.drawable.ic_settings_placeholder // Example name, ensure this drawable exists
+    val ic_nav_asset = R.drawable.ic_nav_asset_placeholder // Add this drawable for asset management
 }
 
 sealed class Screen(
@@ -59,9 +59,9 @@ sealed class Screen(
     object Home : Screen("home", "Home", NavDrawables.ic_nav_home)
     object TradeEntry : Screen("trade_entry", "New Trade Entry", NavDrawables.ic_nav_trade_entry)
     object TradeHistory : Screen("trade_history", "History", NavDrawables.ic_nav_history)
-    object SingleTradeView : Screen("trade_detail_view", "Trade View", NavDrawables.ic_nav_single_trade_view)
     object PerformanceSummary : Screen("performance_summary", "Performance", NavDrawables.ic_nav_performance)
     object Settings : Screen("settings", "Settings", NavDrawables.ic_nav_settings)
+    object TradeAsset : Screen("trade_asset", "Manage Assets", NavDrawables.ic_nav_asset)
 }
 
 val bottomNavItems = listOf(
@@ -73,7 +73,8 @@ val bottomNavItems = listOf(
 // Define items for the Navigation Drawer
 val drawerNavItems = listOf(
     Screen.PerformanceSummary,
-    Screen.Settings
+    Screen.Settings,
+    Screen.TradeAsset
 )
 
 @Composable
