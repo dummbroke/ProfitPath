@@ -93,5 +93,9 @@ dependencies {
     implementation(libs.androidx.compose.runtime.livedata)
 
     implementation("androidx.compose.foundation:foundation:1.4.0")
+
+    implementation ("androidx.compose.ui:ui:1.8.1")
+    implementation ("androidx.compose.ui:ui-text:1.8.1")
+
 }
 

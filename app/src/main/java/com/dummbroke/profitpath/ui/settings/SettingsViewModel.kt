@@ -110,8 +110,11 @@ class SettingsViewModel(
     }
 
     // --- Placeholder for other settings data ---
-    val cloudSyncStatus: StateFlow<String> = MutableStateFlow("Last synced: Not implemented").asStateFlow()
-    val screenshotCacheSize: StateFlow<String> = MutableStateFlow("Calculating...").asStateFlow()
+    val cloudSyncStatus: StateFlow<String> = settingsRepository.getCloudSyncStatus()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Not synced")
+
+    private val _operationFeedback = MutableStateFlow<String?>(null)
+    val operationFeedback: StateFlow<String?> = _operationFeedback.asStateFlow()
 
     // --- Placeholder for account deletion and cache clearing ---
     // These would typically involve more complex logic, confirmation, and repository calls
@@ -119,20 +122,61 @@ class SettingsViewModel(
     val showDeleteAccountConfirmDialog: StateFlow<Boolean> = _showDeleteAccountConfirmDialog.asStateFlow()
 
     fun deleteAccount() {
-        // TODO: Implement actual account deletion logic in repository
-        // e.g., firebaseAuth.currentUser?.delete() + delete user data from Firestore
         viewModelScope.launch {
-            // settingsRepository.deleteCurrentUserAccount()
-             _logoutConfirmedEvent.emit(Unit) // Trigger logout flow after deletion
+            val result = settingsRepository.deleteCurrentUserAccount()
+            if (result.isSuccess) {
+                _operationFeedback.value = "Account deleted successfully."
+                _logoutConfirmedEvent.emit(Unit) // Trigger logout flow after deletion
+            } else {
+                _operationFeedback.value = "Failed to delete account: ${result.exceptionOrNull()?.localizedMessage}" 
+            }
         }
         _showDeleteAccountConfirmDialog.value = false
     }
 
     fun clearScreenshotCache() {
-        // TODO: Implement actual cache clearing logic (local file deletion)
         viewModelScope.launch {
-            // settingsRepository.clearLocalImageCache()
-            // Update screenshotCacheSize accordingly
+            val result = settingsRepository.clearLocalImageCache()
+            if (result.isSuccess) {
+                _operationFeedback.value = "Screenshot cache cleared."
+            } else {
+                _operationFeedback.value = "Failed to clear cache: ${result.exceptionOrNull()?.localizedMessage}"
+            }
         }
+    }
+
+    fun clearOperationFeedback() {
+        _operationFeedback.value = null
+    }
+
+    private val _showChangePasswordDialog = MutableStateFlow(false)
+    val showChangePasswordDialog: StateFlow<Boolean> = _showChangePasswordDialog.asStateFlow()
+
+    private val _changePasswordResult = MutableStateFlow<String?>(null)
+    val changePasswordResult: StateFlow<String?> = _changePasswordResult.asStateFlow()
+
+    fun onChangePasswordClicked() {
+        val provider = settingsRepository.getCurrentAuthProvider()
+        if (provider == "password") {
+            _showChangePasswordDialog.value = true
+        } else {
+            _changePasswordResult.value = "Password change is not available for Google sign-in accounts."
+        }
+    }
+
+    fun changePassword(current: String, new: String) {
+        viewModelScope.launch {
+            val result = settingsRepository.changePassword(current, new)
+            if (result.isSuccess) {
+                _changePasswordResult.value = "Password changed successfully."
+            } else {
+                _changePasswordResult.value = "Failed: ${result.exceptionOrNull()?.localizedMessage}"
+            }
+            _showChangePasswordDialog.value = false
+        }
+    }
+
+    fun clearChangePasswordResult() {
+        _changePasswordResult.value = null
     }
 } 

@@ -15,9 +15,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,30 +29,37 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dummbroke.profitpath.R
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
+import kotlinx.coroutines.launch
 
 // --- Data Models (if needed, for complex settings) ---
 data class TradingStyleOption(val id: String, val displayName: String)
@@ -87,7 +95,6 @@ fun SettingsScreen(
     // val loggedInUserEmail = "john.trader@example.com" // Replaced by userEmail state
     val appVersion = "1.0.0-beta" // This can remain or be moved to ViewModel if dynamic
     val cloudSyncStatus by settingsViewModel.cloudSyncStatus.collectAsState() // Assuming ViewModel provides this
-    val screenshotCacheSize by settingsViewModel.screenshotCacheSize.collectAsState() // Assuming ViewModel provides this
 
     val tradingStyles = listOf(
         TradingStyleOption("scalper", "Scalper"),
@@ -98,6 +105,30 @@ fun SettingsScreen(
         TradingStyleOption("other", "Other")
     )
 
+    val operationFeedback by settingsViewModel.operationFeedback.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    val showChangePasswordDialog by settingsViewModel.showChangePasswordDialog.collectAsState()
+    val changePasswordResult by settingsViewModel.changePasswordResult.collectAsState()
+
+    // Show feedback as Snackbar (for password change too)
+    LaunchedEffect(operationFeedback, changePasswordResult) {
+        operationFeedback?.let {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(it)
+                settingsViewModel.clearOperationFeedback() // Reset after showing
+            }
+        }
+        changePasswordResult?.let {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar(it)
+                settingsViewModel.clearChangePasswordResult()
+            }
+        }
+    }
+
+    val focusManager = LocalFocusManager.current
 
     LazyColumn(
         modifier = Modifier
@@ -110,9 +141,9 @@ fun SettingsScreen(
             SettingItem(
                 iconRes = R.drawable.ic_settings_person_placeholder,
                 title = "Logged in as",
-                subtitle = userEmail ?: "Loading..." // Display email from ViewModel
+                subtitle = userEmail
             )
-            SettingItem(iconRes = R.drawable.ic_settings_lock_reset_placeholder, title = "Change Password", isClickable = true, onClick = { /* TODO: Navigate to Change Password flow */ }) {}
+            SettingItem(iconRes = R.drawable.ic_settings_lock_reset_placeholder, title = "Change Password", isClickable = true, onClick = { settingsViewModel.onChangePasswordClicked() }) {}
             SettingItem(
                 iconRes = R.drawable.ic_settings_logout_placeholder,
                 title = "Logout",
@@ -129,7 +160,11 @@ fun SettingsScreen(
                 title = "Trader Name",
                 value = localTraderName,
                 onValueChange = { localTraderName = it },
-                onSave = { settingsViewModel.updateTraderName(localTraderName.text) }
+                onSave = {
+                    settingsViewModel.updateTraderName(localTraderName.text)
+                    focusManager.clearFocus()
+                },
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done)
             )
             SettingItem(
                 iconRes = R.drawable.ic_settings_profile_style_placeholder,
@@ -162,12 +197,13 @@ fun SettingsScreen(
                 onSave = { 
                     val balanceValue = localCurrentBalance.text.toDoubleOrNull() ?: 0.0
                     settingsViewModel.updateCurrentBalance(balanceValue)
-                }
+                    focusManager.clearFocus()
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
             )
             SettingItem(iconRes = R.drawable.ic_settings_export_json_placeholder, title = "Export Trades to JSON", isClickable = true, onClick = { /* TODO: Handle JSON Export */ }) {}
             SettingItem(iconRes = R.drawable.ic_settings_export_csv_placeholder, title = "Export Trades to CSV", isClickable = true, onClick = { /* TODO: Handle CSV Export */ }) {}
             SettingItem(iconRes = R.drawable.ic_settings_cloud_sync_placeholder, title = "Cloud Sync Status", subtitle = cloudSyncStatus)
-            SettingItem(iconRes = R.drawable.ic_settings_clear_cache_placeholder, title = "Screenshot Cache (${screenshotCacheSize})", subtitle = "Clear locally stored images", isClickable = true, onClick = { showClearCacheDialog = true }) {}
         }
 
         // Application Information & Support Section
@@ -207,19 +243,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showClearCacheDialog) {
-        ConfirmationDialog(
-            title = "Clear Screenshot Cache?",
-            text = "This will remove all locally downloaded trade screenshots from your device. Paths in Firestore will remain. Are you sure?",
-            confirmButtonText = "Clear Cache",
-            onConfirm = {
-                settingsViewModel.clearScreenshotCache() // ViewModel handles cache clearing
-                showClearCacheDialog = false // Dismiss dialog here
-            },
-            onDismiss = { showClearCacheDialog = false }
-        )
-    }
-
     if (showTradingStyleDialog) {
         TradingStyleSelectionDialog(
             currentStyleId = tradingStyle ?: tradingStyles.first().id, // Ensure a default if null
@@ -231,9 +254,24 @@ fun SettingsScreen(
             }
         )
     }
+
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            onConfirm = { current, new, confirm ->
+                if (new == confirm) {
+                    settingsViewModel.changePassword(current, new)
+                }
+                // else handled in dialog
+            },
+            onDismiss = { settingsViewModel.clearChangePasswordResult(); settingsViewModel.clearOperationFeedback() }
+        )
+    }
+
+    // Show SnackbarHost
+    SnackbarHost(hostState = snackbarHostState)
 }
 
-// --- Reusable Setting Item Composables ---
+// --- Reusable Setting Item Composable ---
 @Composable
 fun SettingsSectionTitle(title: String) {
     Text(
@@ -314,8 +352,10 @@ fun EditableSettingItem(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     keyboardType: KeyboardType = KeyboardType.Text,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
 ) {
+    val focusManager = LocalFocusManager.current
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 4.dp))
         OutlinedTextField(
@@ -323,7 +363,7 @@ fun EditableSettingItem(
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            keyboardOptions = keyboardOptions,
             singleLine = (keyboardType == KeyboardType.Number || title == "Trader Name"),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -332,18 +372,28 @@ fun EditableSettingItem(
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface
             ),
             trailingIcon = {
-                IconButton(onClick = onSave) {
+                IconButton(onClick = {
+                    onSave()
+                    focusManager.clearFocus()
+                }) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_save_check_placeholder),
                         contentDescription = "Save $title",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-            }
+            },
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    onSave()
+                    focusManager.clearFocus()
+                }
+            )
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmationDialog(
     title: String,
@@ -352,29 +402,37 @@ fun ConfirmationDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    BasicAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold) },
-        text = { Text(text, style = MaterialTheme.typography.bodyMedium) },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onConfirm()
-                    // onDismiss() // Usually dismiss after confirm, but can be conditional
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = if (title.contains("Delete")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+        content = {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = AlertDialogDefaults.TonalElevation
             ) {
-                Text(confirmButtonText)
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(text, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = onDismiss) { Text("Cancel") }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                onConfirm()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = if (title.contains("Delete")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text(confirmButtonText)
+                        }
+                    }
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surface,
-        titleContentColor = MaterialTheme.colorScheme.onSurface,
-        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        }
     )
 }
 
@@ -388,64 +446,125 @@ fun TradingStyleSelectionDialog(
 ) {
     var selectedStyleId by remember(currentStyleId) { mutableStateOf(currentStyleId) }
 
-    AlertDialog(
+    BasicAlertDialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(dismissOnClickOutside = true) // Allow dismissing by clicking outside
-    ) {
-        Surface(
-            shape = RoundedCornerShape(16.dp), // Consistent with other dialogs/cards
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = AlertDialogDefaults.TonalElevation
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text(
-                    "Select Trading Style",
-                    style = MaterialTheme.typography.headlineSmall, // Or titleLarge
-                    modifier = Modifier.padding(bottom = 20.dp) // Increased padding
-                )
-
-                LazyColumn(modifier = Modifier.weight(1f, fill = false)) { // Allow dialog to shrink if content is small
-                    items(tradingStyles) { styleOption ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedStyleId = styleOption.id }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = (styleOption.id == selectedStyleId),
-                                onClick = { selectedStyleId = styleOption.id },
-                                colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
-                            )
-                            Spacer(Modifier.width(16.dp))
-                            Text(styleOption.displayName, style = MaterialTheme.typography.bodyLarge)
+        content = {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = AlertDialogDefaults.TonalElevation
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(
+                        "Select Trading Style",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(bottom = 20.dp)
+                    )
+                    LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+                        items(tradingStyles) { styleOption ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedStyleId = styleOption.id }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = (styleOption.id == selectedStyleId),
+                                    onClick = { selectedStyleId = styleOption.id },
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+                                )
+                                Spacer(Modifier.width(16.dp))
+                                Text(styleOption.displayName, style = MaterialTheme.typography.bodyLarge)
+                            }
                         }
                     }
-                }
-
-                Spacer(Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = { onConfirm(selectedStyleId) },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        Text("Confirm")
+                        TextButton(onClick = onDismiss) { Text("Cancel") }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { onConfirm(selectedStyleId) },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            Text("Confirm")
+                        }
                     }
                 }
             }
         }
-    }
+    )
 }
 
+@Composable
+fun ChangePasswordDialog(
+    onConfirm: (String, String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var current by remember { mutableStateOf("") }
+    var new by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    BasicAlertDialog(
+        onDismissRequest = onDismiss,
+        content = {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(Modifier.padding(24.dp)) {
+                    Text("Change Password", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = current,
+                        onValueChange = { current = it },
+                        label = { Text("Current Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = new,
+                        onValueChange = { new = it },
+                        label = { Text("New Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = confirm,
+                        onValueChange = { confirm = it },
+                        label = { Text("Confirm New Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true
+                    )
+                    error?.let {
+                        Text(it, color = MaterialTheme.colorScheme.error)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = onDismiss) { Text("Cancel") }
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = {
+                            if (new != confirm) {
+                                error = "Passwords do not match"
+                            } else if (new.length < 6) {
+                                error = "Password must be at least 6 characters"
+                            } else {
+                                error = null
+                                onConfirm(current, new, confirm)
+                            }
+                        }) { Text("Confirm") }
+                    }
+                }
+            }
+        }
+    )
+}
 
 // --- Previews ---
 @Preview(showBackground = true, name = "Settings Screen Light")
