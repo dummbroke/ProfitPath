@@ -29,6 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dummbroke.profitpath.R
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import com.dummbroke.profitpath.ui.home.TradeInsights
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 // --- Data Classes (Placeholders) ---
 data class UserProfile(
@@ -45,12 +50,6 @@ data class AccountBalanceInfo(
 data class TradeStatItem(
     val label: String,
     val value: String
-)
-
-data class TradeInsights(
-    val biggestWin: Double,
-    val worstLoss: Double,
-    val mostTradedAsset: String
 )
 
 data class RecentTradeItem(
@@ -441,8 +440,7 @@ fun RecentTradesSectionEmptyPreview() {
 
 @Composable
 fun HomeScreen(
-    userProfile: UserProfile = UserProfile("Trader Name", "Scalping"),
-    accountBalanceInfo: AccountBalanceInfo = AccountBalanceInfo(10250.75, 1.2),
+    viewModel: HomeViewModel = viewModel(),
     tradeStats: List<TradeStatItem> = listOf(
         TradeStatItem("Total Trades", "152"),
         TradeStatItem("Win Rate", "68%"),
@@ -454,6 +452,38 @@ fun HomeScreen(
         RecentTradeItem("2", "2024-07-27", "Short ETHUSDT", false, -75.5)
     )
 ) {
+    val userProfile = viewModel.userProfile.collectAsState().value
+    val profile = UserProfile(
+        name = userProfile?.name ?: "Trader Name",
+        tradingStyle = getTradingStyleDisplayName(userProfile?.tradingStyle ?: "")
+    )
+    val accountBalanceInfo = AccountBalanceInfo(
+        balance = userProfile?.balance ?: 0.0,
+        dailyChangePercentage = 0.0 // Placeholder, you can fetch/compute this if needed
+    )
+    val tradeStats = viewModel.tradeStats.collectAsState().value
+    val tradeSummaryItems = listOf(
+        TradeStatItem("Total Trades", tradeStats?.totalTrades?.toString() ?: "-"),
+        TradeStatItem("Win Rate", if (tradeStats != null) "${"%.0f".format(tradeStats.winRate)}%" else "-"),
+        TradeStatItem("Best Trade", if (tradeStats != null) "+$${"%.2f".format(tradeStats.bestTradeAmount)}" else "-")
+    )
+    val tradeInsights = viewModel.tradeInsights.collectAsState().value
+    val insights = TradeInsights(
+        biggestWin = tradeInsights?.biggestWin ?: 0.0,
+        worstLoss = tradeInsights?.worstLoss ?: 0.0,
+        mostTradedAsset = tradeInsights?.mostTradedAsset ?: "-"
+    )
+    val recentTrades = viewModel.recentTrades.collectAsState().value
+    val dateFormatter = SimpleDateFormat("EEE MMM dd yyyy", Locale.getDefault())
+    val recentTradeItems = recentTrades.map {
+        RecentTradeItem(
+            id = it.hashCode().toString(),
+            date = it.entryClientTimestamp?.toDate()?.let { date -> dateFormatter.format(date) } ?: "-",
+            description = it.specificAsset ?: "-",
+            isWin = it.outcome.equals("Win", ignoreCase = true),
+            amount = it.pnlAmount ?: 0.0
+        )
+    }
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background // Updated color
@@ -464,10 +494,10 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            item { HeaderSection(userProfile, accountBalanceInfo) }
-            item { StatsSection(tradeStats) }
-            item { InsightsSection(tradeInsights) }
-            item { RecentTradesSection(recentTrades) }
+            item { HeaderSection(profile, accountBalanceInfo) }
+            item { StatsSection(tradeSummaryItems) }
+            item { InsightsSection(insights) }
+            item { RecentTradesSection(recentTradeItems) }
         }
     }
 }
@@ -487,5 +517,17 @@ fun HomeScreenPreviewLight() {
         Surface(color = MaterialTheme.colorScheme.background) { // Surface is good for previews
             HomeScreen()
         }
+    }
+}
+
+fun getTradingStyleDisplayName(styleId: String): String {
+    return when (styleId) {
+        "scalper" -> "Scalper"
+        "day_trader" -> "Day Trader"
+        "swing_trader" -> "Swing Trader"
+        "position_trader" -> "Position Trader"
+        "investor" -> "Investor"
+        "other" -> "Other"
+        else -> styleId.replaceFirstChar { it.uppercase() }.replace('_', ' ')
     }
 }
