@@ -77,28 +77,13 @@ class SettingsViewModel(
 
     fun updateCurrentBalance(newBalance: Double, resetAnchor: Boolean = false) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        if (resetAnchor) {
-            settingsRepository.setAnchorBalance(userId, newBalance)
+        val firestore = FirebaseFirestore.getInstance()
+        val profileRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
+        profileRef.get().addOnSuccessListener { doc ->
+            // Remove anchorBalance logic
+            profileRef.update("currentBalance", newBalance)
             _currentBalance.value = newBalance.toString()
-        } else {
-            val firestore = FirebaseFirestore.getInstance()
-            val profileRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
-            profileRef.get().addOnSuccessListener { doc ->
-                val anchorBalance = doc.getDouble("anchorBalance")
-                if (anchorBalance == null) {
-                    settingsRepository.setAnchorBalance(userId, newBalance)
-                } else {
-                    profileRef.update("currentBalance", newBalance)
-                }
-                _currentBalance.value = newBalance.toString()
-            }
         }
-    }
-
-    fun resetAnchorBalanceToCurrent() {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val newBalance = _currentBalance.value.toDoubleOrNull() ?: 0.0
-        settingsRepository.setAnchorBalance(userId, newBalance)
     }
 
     // --- Existing Theme Toggle Logic ---

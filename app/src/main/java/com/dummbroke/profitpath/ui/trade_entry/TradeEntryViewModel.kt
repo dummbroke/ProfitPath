@@ -259,9 +259,6 @@ class TradeEntryViewModel(application: Application) : AndroidViewModel(applicati
                 val result = repository.updateTrade(tradeId, trade, selectedImageUri)
                 result.fold(
                     onSuccess = {
-                        if (pnlAmount != null) {
-                            repository.updateProfileBalanceWithTrade(pnlAmount)
-                        }
                         _uiState.value = TradeEntryUiState.Success
                     },
                     onFailure = { exception ->

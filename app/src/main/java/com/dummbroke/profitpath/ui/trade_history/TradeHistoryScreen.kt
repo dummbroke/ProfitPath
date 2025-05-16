@@ -43,6 +43,8 @@ import com.dummbroke.profitpath.ui.trade_history.TradeHistoryViewModel
 import androidx.compose.foundation.Image
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 
 // --- Data Class for Trade History Item ---
 data class TradeHistoryItem(
@@ -206,6 +208,19 @@ fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistory
     var showDetailDialog by remember { mutableStateOf(false) }
     var selectedTradeIdForDialog by remember { mutableStateOf<String?>(null) }
 
+    // --- Filter State ---
+    var selectedAssetClass by remember { mutableStateOf("All") }
+    var selectedStrategy by remember { mutableStateOf("All") }
+    var selectedOutcome by remember { mutableStateOf("All") }
+    var selectedMarketCondition by remember { mutableStateOf("All") }
+    var selectedDateRange by remember { mutableStateOf("All") }
+
+    val assetClassOptions = listOf("All", "Forex", "Stocks", "Crypto")
+    val strategyOptions = listOf("All", "Bullish Trading", "Bearish Trading", "Trend Trading", "Momentum Trading", "Mean Reversion", "Breakout Trading", "Reversal Trading", "Range Trading", "Gap Trading", "Price Action Trading", "News Trading", "Earnings Trading", "Merger & Acquisition Trading", "Central Bank Policy Trading", "Algorithmic Trading", "Arbitrage Trading", "High-Frequency Trading (HFT)", "Pairs Trading")
+    val outcomeOptions = listOf("All", "Win", "Loss", "Breakeven")
+    val marketConditionOptions = listOf("All", "Bullish Trend", "Bearish Trend", "Ranging", "High Volatility", "Low Volatility", "News Event")
+    val dateRangeOptions = listOf("All", "Today", "Last 7 Days", "This Month")
+
     val uiState by viewModel.uiState.collectAsState()
 
     // Filtering and mapping
@@ -217,10 +232,26 @@ fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistory
         val asset = trade.specificAsset ?: ""
         val strategy = trade.strategyUsed ?: ""
         val outcome = trade.outcome ?: ""
-        searchQuery.text.isBlank() ||
+        val marketCondition = trade.marketCondition ?: ""
+        val tradeDate = trade.tradeDate?.toDate()
+        val tags = trade.tags ?: emptyList()
+        val matchesSearch = searchQuery.text.isBlank() ||
             asset.contains(searchQuery.text, ignoreCase = true) ||
             strategy.contains(searchQuery.text, ignoreCase = true) ||
-            outcome.contains(searchQuery.text, ignoreCase = true)
+            outcome.contains(searchQuery.text, ignoreCase = true) ||
+            tags.any { it.contains(searchQuery.text, ignoreCase = true) }
+        val matchesAssetClass = selectedAssetClass == "All" || (trade.assetClass ?: "") == selectedAssetClass
+        val matchesStrategy = selectedStrategy == "All" || strategy == selectedStrategy
+        val matchesOutcome = selectedOutcome == "All" || outcome.equals(selectedOutcome, ignoreCase = true)
+        val matchesMarketCondition = selectedMarketCondition == "All" || marketCondition == selectedMarketCondition
+        val matchesDate = when (selectedDateRange) {
+            "All" -> true
+            "Today" -> tradeDate != null && android.text.format.DateUtils.isToday(tradeDate.time)
+            "Last 7 Days" -> tradeDate != null && tradeDate.after(java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -7) }.time)
+            "This Month" -> tradeDate != null && tradeDate.month == java.util.Calendar.getInstance().time.month && tradeDate.year == java.util.Calendar.getInstance().time.year
+            else -> true
+        }
+        matchesSearch && matchesAssetClass && matchesStrategy && matchesOutcome && matchesMarketCondition && matchesDate
     }
 
     if (showDetailDialog && selectedTradeIdForDialog != null) {
@@ -258,7 +289,86 @@ fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistory
             Spacer(modifier = Modifier.height(16.dp))
             SearchBar(searchQuery) { searchQuery = it }
             Spacer(modifier = Modifier.height(8.dp))
-            // TODO: Add filter section if needed
+            // --- Filter Button and Section ---
+            Button(
+                onClick = { showFilters = !showFilters },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Icon(Icons.Filled.FilterList, contentDescription = "Filter Options", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                Spacer(Modifier.width(8.dp))
+                Text("Filter Options", color = MaterialTheme.colorScheme.onSecondaryContainer)
+            }
+            if (showFilters) {
+                Spacer(Modifier.height(12.dp))
+                androidx.compose.foundation.rememberScrollState().let { scrollState ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                            .padding(16.dp)
+                            .verticalScroll(scrollState),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        FilterDropdown(
+                            label = "Asset Class",
+                            selectedOption = selectedAssetClass,
+                            options = assetClassOptions,
+                            onOptionSelected = { selectedAssetClass = it }
+                        )
+                        FilterDropdown(
+                            label = "Strategy",
+                            selectedOption = selectedStrategy,
+                            options = strategyOptions,
+                            onOptionSelected = { selectedStrategy = it }
+                        )
+                        FilterDropdown(
+                            label = "Outcome",
+                            selectedOption = selectedOutcome,
+                            options = outcomeOptions,
+                            onOptionSelected = { selectedOutcome = it }
+                        )
+                        FilterDropdown(
+                            label = "Market Condition",
+                            selectedOption = selectedMarketCondition,
+                            options = marketConditionOptions,
+                            onOptionSelected = { selectedMarketCondition = it }
+                        )
+                        FilterDropdown(
+                            label = "Date Range",
+                            selectedOption = selectedDateRange,
+                            options = dateRangeOptions,
+                            onOptionSelected = { selectedDateRange = it }
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    selectedAssetClass = "All"
+                                    selectedStrategy = "All"
+                                    selectedOutcome = "All"
+                                    selectedMarketCondition = "All"
+                                    selectedDateRange = "All"
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Reset")
+                            }
+                            Button(
+                                onClick = { showFilters = false },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Apply")
+                            }
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             when (uiState) {
                 is TradeHistoryUiState.Loading -> {
@@ -361,94 +471,6 @@ fun FilterDropdown(
                         expanded = false
                     }
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun FilterSection(
-    showFilters: Boolean,
-    onShowFiltersToggle: () -> Unit,
-    selectedDateRange: String,
-    dateRangeOptions: List<String>,
-    onDateRangeSelected: (String) -> Unit,
-    selectedStrategy: String,
-    strategyOptions: List<String>,
-    onStrategySelected: (String) -> Unit,
-    selectedWinLoss: String,
-    winLossOptions: List<String>,
-    onWinLossSelected: (String) -> Unit,
-    selectedBalanceImpact: String,
-    balanceImpactOptions: List<String>,
-    onBalanceImpactSelected: (String) -> Unit,
-    onResetFilters: () -> Unit,
-    onApplyFilters: () -> Unit
-) {
-    Column {
-        Button(
-            onClick = onShowFiltersToggle,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-        ) {
-            Icon(Icons.Filled.FilterList, contentDescription = "Filter Options", tint = MaterialTheme.colorScheme.onSecondaryContainer)
-            Spacer(Modifier.width(8.dp))
-            Text("Filter Options", color = MaterialTheme.colorScheme.onSecondaryContainer)
-        }
-
-        if (showFilters) {
-            Spacer(Modifier.height(12.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                FilterDropdown(
-                    label = "Date Range",
-                    selectedOption = selectedDateRange,
-                    options = dateRangeOptions,
-                    onOptionSelected = onDateRangeSelected
-                )
-                FilterDropdown(
-                    label = "Strategy",
-                    selectedOption = selectedStrategy,
-                    options = strategyOptions,
-                    onOptionSelected = onStrategySelected
-                )
-                FilterDropdown(
-                    label = "Win/Loss/Break-Even",
-                    selectedOption = selectedWinLoss,
-                    options = winLossOptions,
-                    onOptionSelected = onWinLossSelected
-                )
-                FilterDropdown(
-                    label = "Balance Impact",
-                    selectedOption = selectedBalanceImpact,
-                    options = balanceImpactOptions,
-                    onOptionSelected = onBalanceImpactSelected
-                )
-                Spacer(Modifier.height(8.dp)) // Space before buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onResetFilters,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Reset")
-                    }
-                    Button(
-                        onClick = onApplyFilters,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Apply")
-                    }
-                }
             }
         }
     }
@@ -774,44 +796,6 @@ fun TradeHistoryScreenPreviewDark() {
     val context = androidx.compose.ui.platform.LocalContext.current
     ProfitPathTheme(darkTheme = true) {
         TradeHistoryScreen(navController = NavHostController(context))
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun FilterSectionPreviewExpanded() {
-    ProfitPathTheme {
-        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(16.dp)) {
-            // Dummy state for preview
-            var selectedDateRange by remember { mutableStateOf(DEFAULT_FILTER_ALL) }
-            var selectedStrategy by remember { mutableStateOf(DEFAULT_FILTER_ALL) }
-            var selectedWinLoss by remember { mutableStateOf(DEFAULT_FILTER_ALL) }
-            var selectedBalanceImpact by remember { mutableStateOf(DEFAULT_FILTER_ANY) }
-
-            FilterSection(
-                showFilters = true,
-                onShowFiltersToggle = {},
-                selectedDateRange = selectedDateRange,
-                dateRangeOptions = listOf(DEFAULT_FILTER_ALL, "Today", "Last 7 Days"),
-                onDateRangeSelected = {selectedDateRange = it},
-                selectedStrategy = selectedStrategy,
-                strategyOptions = listOf(DEFAULT_FILTER_ALL, "Scalping", "Swing Trading"),
-                onStrategySelected = {selectedStrategy = it},
-                selectedWinLoss = selectedWinLoss,
-                winLossOptions = listOf(DEFAULT_FILTER_ALL, "Win", "Loss"),
-                onWinLossSelected = {selectedWinLoss = it},
-                selectedBalanceImpact = selectedBalanceImpact,
-                balanceImpactOptions = listOf(DEFAULT_FILTER_ANY, "Positive", "Negative"),
-                onBalanceImpactSelected = {selectedBalanceImpact = it},
-                onResetFilters = { // Simulate reset for preview
-                    selectedDateRange = DEFAULT_FILTER_ALL
-                    selectedStrategy = DEFAULT_FILTER_ALL
-                    selectedWinLoss = DEFAULT_FILTER_ALL
-                    selectedBalanceImpact = DEFAULT_FILTER_ANY
-                },
-                onApplyFilters = {}
-            )
-        }
     }
 }
 

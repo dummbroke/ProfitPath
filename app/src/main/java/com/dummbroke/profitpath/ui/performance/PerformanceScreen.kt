@@ -187,15 +187,6 @@ fun PerformanceFiltersAndExport(
             FilterDropdownPerformance(label = "Date Range", selectedOption = selectedDateRange, options = dateRangeOptions, onOptionSelected = onDateRangeSelected, modifier = Modifier.weight(1f))
             FilterDropdownPerformance(label = "Strategy", selectedOption = selectedStrategyFilter, options = strategyFilterOptions, onOptionSelected = onStrategyFilterSelected, modifier = Modifier.weight(1f))
         }
-        OutlinedButton(
-            onClick = onExportClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Icon(Icons.Filled.Share, contentDescription = "Export Summary", Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Export Performance Summary")
-        }
     }
 }
 

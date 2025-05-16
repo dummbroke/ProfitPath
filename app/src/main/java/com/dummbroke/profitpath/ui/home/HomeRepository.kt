@@ -139,22 +139,4 @@ class HomeRepository {
         }
         awaitClose { listener.remove() }
     }
-
-    fun getAnchorBalance(): Flow<Double?> = callbackFlow {
-        val userId = firebaseAuth.currentUser?.uid
-        if (userId == null) {
-            trySend(null)
-            close()
-            return@callbackFlow
-        }
-        val docRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
-        val listener = docRef.addSnapshotListener { snapshot, _ ->
-            if (snapshot != null && snapshot.exists()) {
-                trySend(snapshot.getDouble("anchorBalance"))
-            } else {
-                trySend(null)
-            }
-        }
-        awaitClose { listener.remove() }
-    }
 } 

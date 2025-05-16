@@ -200,18 +200,4 @@ class SettingsRepository(private val context: Context) { // Accept Context
             Result.failure(e)
         }
     }
-
-    fun setAnchorBalance(userId: String, newBalance: Double, onComplete: (() -> Unit)? = null, onError: ((Exception) -> Unit)? = null) {
-        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-        val profileRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
-        val now = LocalDate.now().toString()
-        val updateMap = mapOf(
-            "currentBalance" to newBalance,
-            "anchorBalance" to newBalance,
-            "anchorSetDate" to now
-        )
-        profileRef.update(updateMap)
-            .addOnSuccessListener { onComplete?.invoke() }
-            .addOnFailureListener { e -> onError?.invoke(e) }
-    }
 } 

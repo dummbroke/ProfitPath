@@ -208,19 +208,6 @@ fun SettingsScreen(
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
             )
-            Button(
-                onClick = { 
-                    val balanceValue = localCurrentBalance.text.toDoubleOrNull() ?: 0.0
-                    settingsViewModel.updateCurrentBalance(balanceValue, resetAnchor = true)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-            ) {
-                Text("Reset Anchor Balance to Current", color = MaterialTheme.colorScheme.onSecondaryContainer)
-            }
             SettingItem(iconRes = R.drawable.ic_settings_export_json_placeholder, title = "Export Trades to JSON", isClickable = true, onClick = { /* TODO: Handle JSON Export */ }) {}
             SettingItem(iconRes = R.drawable.ic_settings_export_csv_placeholder, title = "Export Trades to CSV", isClickable = true, onClick = { /* TODO: Handle CSV Export */ }) {}
             SettingItem(iconRes = R.drawable.ic_settings_cloud_sync_placeholder, title = "Cloud Sync Status", subtitle = cloudSyncStatus)
