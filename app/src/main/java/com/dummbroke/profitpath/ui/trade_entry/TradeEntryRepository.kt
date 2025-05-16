@@ -98,4 +98,55 @@ class TradeEntryRepository(
             null
         }
     }
+
+    suspend fun updateProfileBalanceWithTrade(pnlAmount: Double) = withContext(Dispatchers.IO) {
+        val userId = auth.currentUser?.uid ?: return@withContext
+        val profileDoc = firestore.collection("users")
+            .document(userId)
+            .collection("profile")
+            .document("user_profile_data")
+        val snapshot = profileDoc.get().await()
+        val currentBalance = snapshot.getDouble("currentBalance") ?: 0.0
+        val newBalance = currentBalance + pnlAmount
+        profileDoc.update("currentBalance", newBalance).await()
+    }
+
+    suspend fun updateTrade(tradeId: String, trade: Trade, imageUri: Uri?): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val userId = auth.currentUser?.uid
+            if (userId == null) {
+                return@withContext Result.failure(Exception("User not logged in"))
+            }
+            trade.userId = userId
+            trade.lastUpdated = Timestamp.now()
+
+            // Handle image updating
+            if (imageUri != null) {
+                val imagePath = saveImageToLocalStrong(userId, imageUri)
+                if (imagePath != null) {
+                    trade.screenshotPath = imagePath
+                }
+            } else {
+                // If no new image, keep the existing screenshotPath (do not overwrite)
+                val existingDoc = firestore.collection("users")
+                    .document(userId)
+                    .collection("trades")
+                    .document(tradeId)
+                    .get()
+                    .await()
+                val existingTrade = existingDoc.toObject(Trade::class.java)
+                if (existingTrade != null && !existingTrade.screenshotPath.isNullOrBlank()) {
+                    trade.screenshotPath = existingTrade.screenshotPath
+                }
+            }
+
+            firestore.collection("users").document(userId)
+                .collection("trades").document(tradeId)
+                .set(trade)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 } 

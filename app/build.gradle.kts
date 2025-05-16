@@ -97,5 +97,7 @@ dependencies {
     implementation ("androidx.compose.ui:ui:1.8.1")
     implementation ("androidx.compose.ui:ui-text:1.8.1")
 
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }
 

@@ -109,4 +109,52 @@ class HomeRepository {
         }
         awaitClose { listener.remove() }
     }
+
+    fun getPreviousDayBalance(): Flow<Double?> = callbackFlow {
+        val userId = firebaseAuth.currentUser?.uid
+        if (userId == null) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+        val now = System.currentTimeMillis()
+        val startOfToday = java.util.Calendar.getInstance().apply {
+            timeInMillis = now
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val tradesRef = firestore.collection("users").document(userId).collection("trades")
+            .whereLessThan("tradeDate", com.google.firebase.Timestamp(startOfToday / 1000, 0))
+            .orderBy("tradeDate", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+        val listener = tradesRef.addSnapshotListener { snapshot, _ ->
+            if (snapshot != null && !snapshot.isEmpty) {
+                val trade = snapshot.documents.firstOrNull()?.toObject(Trade::class.java)
+                trySend(trade?.newBalanceAfterTrade)
+            } else {
+                trySend(null)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    fun getAnchorBalance(): Flow<Double?> = callbackFlow {
+        val userId = firebaseAuth.currentUser?.uid
+        if (userId == null) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+        val docRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
+        val listener = docRef.addSnapshotListener { snapshot, _ ->
+            if (snapshot != null && snapshot.exists()) {
+                trySend(snapshot.getDouble("anchorBalance"))
+            } else {
+                trySend(null)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
 } 

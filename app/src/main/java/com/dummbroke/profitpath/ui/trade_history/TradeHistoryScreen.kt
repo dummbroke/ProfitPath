@@ -40,6 +40,9 @@ import com.dummbroke.profitpath.core.models.Trade
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dummbroke.profitpath.ui.trade_history.TradeHistoryUiState
 import com.dummbroke.profitpath.ui.trade_history.TradeHistoryViewModel
+import androidx.compose.foundation.Image
+import coil.compose.rememberAsyncImagePainter
+import androidx.compose.ui.layout.ContentScale
 
 // --- Data Class for Trade History Item ---
 data class TradeHistoryItem(
@@ -94,8 +97,6 @@ data class TradeDetailData(
     val outcome: String,
     val pnlAmount: Double?,
     val entryAmountUSD: Double?,
-    val balanceBeforeTrade: Double?,
-    val accountBalanceAfterTrade: Double?,
     val preTradeRationale: String,
     val executionNotes: String,
     val postTradeReview: String,
@@ -156,8 +157,6 @@ fun TradeHistoryItem.toTradeDetailData(): TradeDetailData {
         outcome = this.outcome,
         pnlAmount = this.pnl,
         entryAmountUSD = this.entryAmountUSD,
-        balanceBeforeTrade = this.balanceBeforeTrade,
-        accountBalanceAfterTrade = this.accountBalanceAfterTrade,
         preTradeRationale = this.preTradeRationale,
         executionNotes = this.executionNotes,
         postTradeReview = this.postTradeReview,
@@ -186,8 +185,6 @@ fun Trade.toTradeDetailData(id: String): TradeDetailData {
         outcome = this.outcome ?: "N/A",
         pnlAmount = this.pnlAmount,
         entryAmountUSD = this.entryAmountUSD,
-        balanceBeforeTrade = this.balanceBeforeTrade,
-        accountBalanceAfterTrade = this.newBalanceAfterTrade,
         preTradeRationale = this.preTradeRationale ?: "",
         executionNotes = this.executionNotes ?: "",
         postTradeReview = this.postTradeReview ?: "",
@@ -232,6 +229,16 @@ fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistory
             TradeDetailDialog(
                 tradeDetail = trade.toTradeDetailData(selectedTradeIdForDialog!!),
                 onDismissRequest = {
+                    showDetailDialog = false
+                    selectedTradeIdForDialog = null
+                },
+                onEdit = {
+                    navController.navigate("edit_trade?tradeId=${selectedTradeIdForDialog}")
+                    showDetailDialog = false
+                    selectedTradeIdForDialog = null
+                },
+                onDelete = {
+                    viewModel.deleteTrade(selectedTradeIdForDialog!!)
                     showDetailDialog = false
                     selectedTradeIdForDialog = null
                 }
@@ -525,7 +532,12 @@ private fun TradeScreenshotDisplay(screenshotUri: String?) {
             contentAlignment = Alignment.Center
         ) {
             if (screenshotUri != null && screenshotUri.isNotBlank()) {
-                Text("Screenshot Preview (URI: $screenshotUri)", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(8.dp))
+                Image(
+                    painter = rememberAsyncImagePainter(screenshotUri),
+                    contentDescription = "Trade Screenshot",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             } else {
                 Icon(
                     imageVector = Icons.Filled.MoreVert, // Placeholder icon, replace with image loader if needed
@@ -566,12 +578,6 @@ private fun TradeInfoSection(details: TradeDetailData) {
                 "loss" -> Color(0xFFEF5350)
                 else -> MaterialTheme.colorScheme.onSurface
             })
-            InfoRow("Balance Before Trade:", formatCurrencyDetail(details.balanceBeforeTrade))
-            if(details.balanceUpdated) {
-                InfoRow("Updated Account Balance:", formatCurrencyDetail(details.accountBalanceAfterTrade))
-            } else {
-                InfoRow("Account Balance After:", formatCurrencyDetail(details.accountBalanceAfterTrade, defaultText = "Not Updated by this trade"))
-            }
         }
     }
 }
@@ -666,7 +672,29 @@ private fun TagsSection(tags: List<String>) {
 }
 
 @Composable
-fun TradeDetailDialog(tradeDetail: TradeDetailData, onDismissRequest: () -> Unit) {
+fun TradeDetailDialog(
+    tradeDetail: TradeDetailData,
+    onDismissRequest: () -> Unit,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
+) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Trade?") },
+            text = { Text("Are you sure you want to delete this trade entry? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    onDelete?.invoke()
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismissRequest) {
         Card(
             modifier = Modifier
@@ -710,11 +738,20 @@ fun TradeDetailDialog(tradeDetail: TradeDetailData, onDismissRequest: () -> Unit
                     item { TagsSection(tradeDetail.tags) }
                     item { Spacer(modifier = Modifier.height(72.dp)) }
                 }
-                Button(
-                    onClick = onDismissRequest,
-                    modifier = Modifier.align(Alignment.End).padding(top = 16.dp)
+                Row(
+                    modifier = Modifier.align(Alignment.End).padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Close")
+                    onEdit?.let {
+                        Button(onClick = { onEdit() }) { Text("Edit") }
+                    }
+                    onDelete?.let {
+                        Button(
+                            onClick = { showDeleteConfirm = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) { Text("Delete", color = MaterialTheme.colorScheme.onError) }
+                    }
+                    Button(onClick = onDismissRequest) { Text("Close") }
                 }
             }
         }
@@ -850,8 +887,6 @@ fun TradeDetailDialogPreview() {
                     outcome = "Win",
                     pnlAmount = 150.0,
                     entryAmountUSD = 1000.0,
-                    balanceBeforeTrade = 10000.0,
-                    accountBalanceAfterTrade = 10050.0,
                     preTradeRationale = "Price broke above resistance.",
                     executionNotes = "Slight slippage on entry.",
                     postTradeReview = "Should have held longer.",

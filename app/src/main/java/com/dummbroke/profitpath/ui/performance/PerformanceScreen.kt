@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
 import java.text.DecimalFormat
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 // --- Data Classes for Performance Metrics ---
 data class PerformanceOverview(
@@ -73,87 +74,99 @@ fun formatCurrency(value: Double, withSign: Boolean = false): String {
 // --- Composable Functions ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PerformanceScreen() {
-    // Placeholder states for filters
-    var selectedDateRange by remember { mutableStateOf("Overall") }
-    var selectedStrategyFilter by remember { mutableStateOf("All") }
-
-    // Placeholder data
-    val performanceData = PerformanceOverview(
-        currentBalance = 12550.75,
-        netPnL = 2550.75,
-        pnlPercentage = 25.5,
-        totalTrades = 152,
-        winRate = 0.68,
-        bestTrade = 520.00,
-        worstTrade = -210.00,
-        profitFactor = 2.1,
-        expectancy = 16.78,
-        avgWin = 85.20,
-        avgLoss = -40.50,
-        avgHoldingTime = "6h 15m",
-        longestWinStreak = 7,
-        longestLossStreak = 3,
-        maxDrawdown = -850.50,
-        bestDayPnl = 300.00,
-        worstDayPnl = -150.00
+fun PerformanceScreen(
+    performanceViewModel: PerformanceViewModel = viewModel()
+) {
+    val uiState by performanceViewModel.uiState.collectAsState()
+    val strategies by performanceViewModel.strategies.collectAsState()
+    // Default strategy options with descriptions
+    val defaultStrategies = listOf(
+        "Trend Following",
+        "Scalping",
+        "Day Trading",
+        "Swing Trading",
+        "Position Trading",
+        "Momentum Trading",
+        "Arbitrage Trading",
+        "Algorithmic Trading",
+        "Range Trading",
+        "News-Based Trading"
     )
-
-    val monthlySummary = listOf(
-        TimePeriodSummary("July 2024", 45, 1200.50),
-        TimePeriodSummary("June 2024", 50, -300.20),
-        TimePeriodSummary("May 2024", 30, 800.00)
+    val selectedStrategy by performanceViewModel.selectedStrategy.collectAsState()
+    val selectedDateRange by performanceViewModel.selectedDateRange.collectAsState()
+    val dateRangeOptions = performanceViewModel.getDateRangeOptions()
+    // Always use these 17 strategies for the dropdown (plus 'All')
+    val strategyFilterOptions = listOf(
+        "All",
+        "Bullish Trading",
+        "Bearish Trading",
+        "Trend Trading",
+        "Momentum Trading",
+        "Mean Reversion",
+        "Breakout Trading",
+        "Reversal Trading",
+        "Range Trading",
+        "Gap Trading",
+        "Price Action Trading",
+        "News Trading",
+        "Earnings Trading",
+        "Merger & Acquisition Trading",
+        "Central Bank Policy Trading",
+        "Algorithmic Trading",
+        "Arbitrage Trading",
+        "High-Frequency Trading (HFT)",
+        "Pairs Trading"
     )
-
-    val strategyPerformance = listOf(
-        PerformanceByStrategy("Scalping", 70, 50, 20, 1500.0),
-        PerformanceByStrategy("Swing Trading", 50, 30, 20, 800.0),
-        PerformanceByStrategy("Breakout", 32, 12, 20, 250.75)
-    )
-
-    val dateRangeOptions = listOf("Overall", "Last 7 Days", "Last 30 Days", "Custom")
-    val strategyFilterOptions = listOf("All") + strategyPerformance.map { it.strategy }.distinct()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Filters and Export Button
-            item {
-                Spacer(modifier = Modifier.height(16.dp)) // Space from TopAppBar (if any)
-                PerformanceFiltersAndExport(
-                    selectedDateRange = selectedDateRange,
-                    dateRangeOptions = dateRangeOptions,
-                    onDateRangeSelected = { selectedDateRange = it },
-                    selectedStrategyFilter = selectedStrategyFilter,
-                    strategyFilterOptions = strategyFilterOptions,
-                    onStrategyFilterSelected = { selectedStrategyFilter = it },
-                    onExportClick = { /* TODO: Implement Export */ }
-                )
+        when (uiState) {
+            is PerformanceUiState.Loading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
-
-            // Summary Cards Section
-            item { BalanceAndPnlOverviewCard(performanceData) }
-            item { KeyStatsGrid(performanceData) }
-            item { AverageMetricsCard(performanceData) }
-            item { StreaksAndDrawdownCard(performanceData) }
-
-            // Trend & Comparison Section
-            item { PerformanceTrendsSection(monthlySummary, performanceData.bestDayPnl, performanceData.worstDayPnl) }
-
-            // Distribution Analysis Section
-            item { PerformanceByStrategyTable(strategyPerformance) }
-
-            // Income Percentage Analysis (Placeholder)
-            item { IncomePercentageAnalysisPlaceholder() }
-            
-            item { Spacer(modifier = Modifier.height(16.dp)) } // Bottom padding
+            is PerformanceUiState.Error -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = (uiState as PerformanceUiState.Error).message,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            is PerformanceUiState.Success -> {
+                val performanceData = (uiState as PerformanceUiState.Success).overview
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        PerformanceFiltersAndExport(
+                            selectedDateRange = dateRangeOptions.firstOrNull { it.second == selectedDateRange }?.first ?: "Overall",
+                            dateRangeOptions = dateRangeOptions.map { it.first },
+                            onDateRangeSelected = { label ->
+                                val range = dateRangeOptions.firstOrNull { it.first == label }?.second ?: DateRange.Overall
+                                performanceViewModel.updateDateRange(range)
+                            },
+                            selectedStrategyFilter = selectedStrategy,
+                            strategyFilterOptions = strategyFilterOptions,
+                            onStrategyFilterSelected = { performanceViewModel.updateStrategy(it) },
+                            onExportClick = { /* TODO: Implement Export */ }
+                        )
+                    }
+                    item { BalanceAndPnlOverviewCard(performanceData) }
+                    item { KeyStatsGrid(performanceData) }
+                    item { AverageMetricsCard(performanceData) }
+                    item { StreaksAndDrawdownCard(performanceData) }
+                    // TODO: Add monthly summary, strategy performance, and other analytics using real data
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                }
+            }
         }
     }
 }
@@ -273,7 +286,7 @@ fun KeyStatsGrid(data: PerformanceOverview) {
             StatCardPerformance("Worst Trade", formatCurrency(data.worstTrade, true), Modifier.weight(1f), valueColor = Color(0xFFEF5350))
         }
          Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatCardPerformance("Profit Factor", data.profitFactor.toString(), Modifier.weight(1f))
+            StatCardPerformance("Profit Factor", String.format("%.2f", data.profitFactor), Modifier.weight(1f))
             StatCardPerformance("Expectancy", formatCurrency(data.expectancy), Modifier.weight(1f))
         }
     }

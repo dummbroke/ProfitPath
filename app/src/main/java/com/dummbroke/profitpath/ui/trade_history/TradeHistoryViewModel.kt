@@ -51,4 +51,16 @@ class TradeHistoryViewModel(
             )
         }
     }
+
+    // Delete a trade by its document ID
+    fun deleteTrade(tradeId: String) {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            val result = repository.deleteTrade(userId, tradeId)
+            result.onFailure { e ->
+                _uiState.value = TradeHistoryUiState.Error(e.message ?: "Failed to delete trade.")
+            }
+            // On success, the real-time listener will update the UI automatically
+        }
+    }
 } 

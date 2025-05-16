@@ -66,4 +66,19 @@ class TradeHistoryRepository(private val firestore: FirebaseFirestore) {
             Result.failure(e)
         }
     }
+
+    // Delete a trade by its document ID
+    suspend fun deleteTrade(userId: String, tradeId: String): Result<Unit> {
+        return try {
+            firestore.collection("users")
+                .document(userId)
+                .collection("trades")
+                .document(tradeId)
+                .delete()
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 } 

@@ -14,12 +14,19 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.update
 
 class SettingsViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
     private val settingsRepository: SettingsRepository = SettingsRepository(application.applicationContext)
+
+    // --- Fix: Add backing property for currentBalance ---
+    private val _currentBalance = MutableStateFlow("0.00")
+    val currentBalance: StateFlow<String> = _currentBalance.asStateFlow()
 
     // User Profile Data
     private val userProfileFlow: StateFlow<UserProfile?> = settingsRepository.getUserProfile()
@@ -28,6 +35,19 @@ class SettingsViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null // Start with null, will be updated from Firestore
         )
+
+    init {
+        // Update _currentBalance when userProfileFlow changes
+        viewModelScope.launch {
+            userProfileFlow.collect { profile ->
+                val balance = profile?.currentBalance ?: 0.0
+                val formatter = NumberFormat.getCurrencyInstance(Locale.US)
+                formatter.minimumFractionDigits = 2
+                formatter.maximumFractionDigits = 2
+                _currentBalance.value = if (balance == 0.0) "0.00" else formatter.format(balance).replace("$","")
+            }
+        }
+    }
 
     val userEmail: StateFlow<String> = userProfileFlow
         .map { it?.email ?: "Loading..." }
@@ -40,16 +60,6 @@ class SettingsViewModel(
     val tradingStyle: StateFlow<String> = userProfileFlow
         .map { it?.tradingStyle ?: "day_trader" } // Default if not set
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "day_trader")
-
-    val currentBalance: StateFlow<String> = userProfileFlow
-        .map { profile ->
-            val balance = profile?.currentBalance ?: 0.0
-            val formatter = NumberFormat.getCurrencyInstance(Locale.US)
-            formatter.minimumFractionDigits = 2
-            formatter.maximumFractionDigits = 2
-            if (balance == 0.0) "0.00" else formatter.format(balance).replace("$","") // Format as string, remove $ if present by default
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "0.00")
 
     fun updateTraderName(name: String) {
         viewModelScope.launch {
@@ -65,11 +75,30 @@ class SettingsViewModel(
         }
     }
 
-    fun updateCurrentBalance(balance: Double) {
-        viewModelScope.launch {
-            settingsRepository.updateCurrentBalance(balance)
-            // Optionally, handle Result<Unit>
+    fun updateCurrentBalance(newBalance: Double, resetAnchor: Boolean = false) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        if (resetAnchor) {
+            settingsRepository.setAnchorBalance(userId, newBalance)
+            _currentBalance.value = newBalance.toString()
+        } else {
+            val firestore = FirebaseFirestore.getInstance()
+            val profileRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
+            profileRef.get().addOnSuccessListener { doc ->
+                val anchorBalance = doc.getDouble("anchorBalance")
+                if (anchorBalance == null) {
+                    settingsRepository.setAnchorBalance(userId, newBalance)
+                } else {
+                    profileRef.update("currentBalance", newBalance)
+                }
+                _currentBalance.value = newBalance.toString()
+            }
         }
+    }
+
+    fun resetAnchorBalanceToCurrent() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val newBalance = _currentBalance.value.toDoubleOrNull() ?: 0.0
+        settingsRepository.setAnchorBalance(userId, newBalance)
     }
 
     // --- Existing Theme Toggle Logic ---

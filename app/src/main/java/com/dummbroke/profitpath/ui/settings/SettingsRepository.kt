@@ -17,6 +17,7 @@ import kotlinx.coroutines.tasks.await
 import java.io.File
 import kotlinx.coroutines.flow.flowOf
 import com.google.firebase.Timestamp
+import java.time.LocalDate
 
 // Create a DataStore instance, tied to the application's lifecycle
 // The name "user_settings" is the name of the preferences file.
@@ -198,5 +199,19 @@ class SettingsRepository(private val context: Context) { // Accept Context
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    fun setAnchorBalance(userId: String, newBalance: Double, onComplete: (() -> Unit)? = null, onError: ((Exception) -> Unit)? = null) {
+        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val profileRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
+        val now = LocalDate.now().toString()
+        val updateMap = mapOf(
+            "currentBalance" to newBalance,
+            "anchorBalance" to newBalance,
+            "anchorSetDate" to now
+        )
+        profileRef.update(updateMap)
+            .addOnSuccessListener { onComplete?.invoke() }
+            .addOnFailureListener { e -> onError?.invoke(e) }
     }
 } 

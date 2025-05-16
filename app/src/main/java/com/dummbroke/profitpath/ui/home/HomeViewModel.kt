@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 
 import com.dummbroke.profitpath.ui.home.HomeRepository
 import com.dummbroke.profitpath.ui.home.HomeUserProfile
@@ -22,4 +24,13 @@ class HomeViewModel : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val recentTrades: StateFlow<List<Trade>> = repository.getRecentTrades()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val anchorBalance: StateFlow<Double?> = repository.getAnchorBalance()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val longTermChangePercentage: StateFlow<Double> = combine(userProfile, anchorBalance) { profile, anchor ->
+        val current = profile?.balance ?: 0.0
+        val anchorVal = anchor ?: 0.0
+        if (anchorVal > 0.0) ((current - anchorVal) / anchorVal) * 100 else 0.0
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 } 

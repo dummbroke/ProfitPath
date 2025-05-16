@@ -49,11 +49,13 @@ import java.util.Locale
 import com.dummbroke.profitpath.ui.trade_asset.TradeAssetViewModel
 import com.dummbroke.profitpath.ui.trade_asset.Asset
 import com.google.firebase.auth.FirebaseAuth
+import com.dummbroke.profitpath.ui.performance.PerformanceViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TradeEntryScreen(
     navController: NavController,
+    tradeId: String? = null,
     tradeEntryViewModel: TradeEntryViewModel = viewModel()
 ) {
     var tradedPair by remember { mutableStateOf("") }
@@ -63,8 +65,6 @@ fun TradeEntryScreen(
     var isWin by remember { mutableStateOf(true) }
     var isLong by remember { mutableStateOf(true) }
     var tradeDate by remember { mutableStateOf("Select Date") }
-    var updateBalance by remember { mutableStateOf(false) }
-    var balanceAmount by remember { mutableStateOf(TextFieldValue("")) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
     var entryPrice by remember { mutableStateOf(TextFieldValue("")) }
@@ -79,11 +79,11 @@ fun TradeEntryScreen(
 
     // New state variables
     var entryAmountUSDStr by remember { mutableStateOf(TextFieldValue("")) }
-    var balanceBeforeTradeStr by remember { mutableStateOf(TextFieldValue("")) }
 
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by tradeEntryViewModel.uiState.collectAsState()
+    val editTrade by tradeEntryViewModel.editTradeState.collectAsState()
 
     val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_IMAGES
@@ -168,6 +168,29 @@ fun TradeEntryScreen(
         if (userId.isNotBlank()) assetViewModel.fetchAssets(userId)
     }
 
+    val performanceViewModel: PerformanceViewModel = viewModel()
+    val strategies by performanceViewModel.strategies.collectAsState()
+    val strategyOptions = listOf(
+        "Bullish Trading",
+        "Bearish Trading",
+        "Trend Trading",
+        "Momentum Trading",
+        "Mean Reversion",
+        "Breakout Trading",
+        "Reversal Trading",
+        "Range Trading",
+        "Gap Trading",
+        "Price Action Trading",
+        "News Trading",
+        "Earnings Trading",
+        "Merger & Acquisition Trading",
+        "Central Bank Policy Trading",
+        "Algorithmic Trading",
+        "Arbitrage Trading",
+        "High-Frequency Trading (HFT)",
+        "Pairs Trading"
+    )
+
     LaunchedEffect(uiState) {
         when (val state = uiState) {
             is TradeEntryUiState.Success -> {
@@ -186,6 +209,45 @@ fun TradeEntryScreen(
         }
     }
 
+    LaunchedEffect(tradeId) {
+        if (tradeId != null) {
+            tradeEntryViewModel.loadTradeForEdit(tradeId)
+        }
+    }
+
+    // Prefill form fields if editing
+    LaunchedEffect(editTrade) {
+        editTrade?.let { trade ->
+            selectedAssetClass = trade.assetClass ?: "Forex"
+            specificAsset = trade.specificAsset ?: ""
+            strategy = trade.strategyUsed ?: "Scalping"
+            isWin = (trade.outcome == "Win")
+            isLong = (trade.positionType == "Long")
+            tradeDate = trade.tradeDate?.toDate()?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(it) } ?: "Select Date"
+            selectedImageUri = null // You may want to handle screenshotPath differently
+            entryPrice = TextFieldValue(trade.entryPrice?.toString() ?: "")
+            stopLossPrice = TextFieldValue(trade.stopLossPrice?.toString() ?: "")
+            takeProfitPrice = TextFieldValue(trade.takeProfitPrice?.toString() ?: "")
+            preTradeRationale = TextFieldValue(trade.preTradeRationale ?: "")
+            executionNotes = TextFieldValue(trade.executionNotes ?: "")
+            postTradeReview = TextFieldValue(trade.postTradeReview ?: "")
+            tags = TextFieldValue(trade.tags?.joinToString(", ") ?: "")
+            selectedMarketCondition = trade.marketCondition ?: "Ranging"
+            pnlAmountStr = TextFieldValue(trade.pnlAmount?.toString() ?: "")
+            entryAmountUSDStr = TextFieldValue(trade.entryAmountUSD?.toString() ?: "")
+        }
+    }
+
+    // Show image: if editing and no new image picked, use screenshotPath
+    val imageToShow = selectedImageUri ?: editTrade?.screenshotPath?.let { Uri.parse(it) }
+
+    // Navigate back to history after update in edit mode
+    LaunchedEffect(uiState, tradeId) {
+        if (tradeId != null && uiState is TradeEntryUiState.Success) {
+            navController.popBackStack()
+        }
+    }
+
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -195,7 +257,7 @@ fun TradeEntryScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                ScreenshotUploadSection(selectedImageUri, onUploadClick = ::handleImageUploadClick)
+                ScreenshotUploadSection(imageToShow, onUploadClick = ::handleImageUploadClick)
             }
 
             item { SectionTitle("Trade Setup") }
@@ -208,7 +270,7 @@ fun TradeEntryScreen(
                     onValueChange = { specificAsset = it }
                 )
             }
-            item { StrategySelector(strategy, listOf("Scalping", "Swing Trading", "Breakout", "Position Trading", "Other")) { strategy = it } }
+            item { StrategySelector(strategy, strategyOptions) { strategy = it } }
             item { MarketConditionSelector(selectedMarketCondition, listOf("Bullish Trend", "Bearish Trend", "Ranging", "High Volatility", "Low Volatility", "News Event")) { selectedMarketCondition = it } }
             item { PositionTypeToggle(isLong) { isLong = it } }
 
@@ -223,7 +285,6 @@ fun TradeEntryScreen(
             item { DatePickerField(tradeDate) { showDatePickerDialog = true } }
 
             item { PriceInputTextField(label = "Entry Amount (USD)", value = entryAmountUSDStr, onValueChange = { entryAmountUSDStr = it }, keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next) }
-            item { PriceInputTextField(label = "Balance Before Trade (USD)", value = balanceBeforeTradeStr, onValueChange = { balanceBeforeTradeStr = it }, keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next) }
             
             item { MultiLineTextField(label = "Pre-Trade Rationale / Setup", value = preTradeRationale, onValueChange = { preTradeRationale = it }) }
             item { MultiLineTextField(label = "Execution Notes", value = executionNotes, onValueChange = { executionNotes = it }) }
@@ -243,47 +304,80 @@ fun TradeEntryScreen(
                 )
             )}
 
-            item { SectionTitle("Optional Balance Update") }
-            item { OptionalBalanceUpdate(updateBalance, balanceAmount, { updateBalance = it }, { balanceAmount = it }) }
-
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        tradeEntryViewModel.saveTradeEntry(
-                            assetClass = selectedAssetClass,
-                            specificAsset = specificAsset,
-                            strategyUsed = strategy,
-                            marketCondition = selectedMarketCondition,
-                            positionType = if (isLong) "Long" else "Short",
-                            entryPriceStr = entryPrice.text,
-                            stopLossPriceStr = stopLossPrice.text,
-                            takeProfitPriceStr = takeProfitPrice.text,
-                            outcome = if (isWin) "Win" else "Loss",
-                            tradeDateStr = tradeDate,
-                            pnlAmountStr = pnlAmountStr.text,
-                            preTradeRationale = preTradeRationale.text,
-                            executionNotes = executionNotes.text,
-                            postTradeReview = postTradeReview.text,
-                            tagsStr = tags.text,
-                            selectedImageUri = selectedImageUri,
-                            balanceShouldBeUpdated = updateBalance,
-                            newBalanceStr = balanceAmount.text,
-                            entryAmountUSDStr = entryAmountUSDStr.text,
-                            balanceBeforeTradeStr = balanceBeforeTradeStr.text
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    enabled = uiState !is TradeEntryUiState.Loading
-                ) {
-                    if (uiState is TradeEntryUiState.Loading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                    } else {
-                        Text("Save Trade", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
+                if (tradeId != null) {
+                    Button(
+                        onClick = {
+                            tradeEntryViewModel.updateTradeEntry(
+                                tradeId = tradeId,
+                                assetClass = selectedAssetClass,
+                                specificAsset = specificAsset,
+                                strategyUsed = strategy,
+                                marketCondition = selectedMarketCondition,
+                                positionType = if (isLong) "Long" else "Short",
+                                entryPriceStr = entryPrice.text,
+                                stopLossPriceStr = stopLossPrice.text,
+                                takeProfitPriceStr = takeProfitPrice.text,
+                                outcome = if (isWin) "Win" else "Loss",
+                                tradeDateStr = tradeDate,
+                                pnlAmountStr = pnlAmountStr.text,
+                                preTradeRationale = preTradeRationale.text,
+                                executionNotes = executionNotes.text,
+                                postTradeReview = postTradeReview.text,
+                                tagsStr = tags.text,
+                                selectedImageUri = selectedImageUri,
+                                entryAmountUSDStr = entryAmountUSDStr.text
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        enabled = uiState !is TradeEntryUiState.Loading
+                    ) {
+                        if (uiState is TradeEntryUiState.Loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        } else {
+                            Text("Update", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            tradeEntryViewModel.saveTradeEntry(
+                                assetClass = selectedAssetClass,
+                                specificAsset = specificAsset,
+                                strategyUsed = strategy,
+                                marketCondition = selectedMarketCondition,
+                                positionType = if (isLong) "Long" else "Short",
+                                entryPriceStr = entryPrice.text,
+                                stopLossPriceStr = stopLossPrice.text,
+                                takeProfitPriceStr = takeProfitPrice.text,
+                                outcome = if (isWin) "Win" else "Loss",
+                                tradeDateStr = tradeDate,
+                                pnlAmountStr = pnlAmountStr.text,
+                                preTradeRationale = preTradeRationale.text,
+                                executionNotes = executionNotes.text,
+                                postTradeReview = postTradeReview.text,
+                                tagsStr = tags.text,
+                                selectedImageUri = selectedImageUri,
+                                entryAmountUSDStr = entryAmountUSDStr.text
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        enabled = uiState !is TradeEntryUiState.Loading
+                    ) {
+                        if (uiState is TradeEntryUiState.Loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                        } else {
+                            Text("Save Trade", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
+                        }
                     }
                 }
             }
@@ -635,51 +729,6 @@ fun DatePickerField(selectedDate: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun OptionalBalanceUpdate(
-    updateEnabled: Boolean,
-    amount: TextFieldValue,
-    onToggle: (Boolean) -> Unit,
-    onAmountChange: (TextFieldValue) -> Unit
-) {
-    Column {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Update Account Balance?", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(Modifier.weight(1f))
-            Switch(
-                checked = updateEnabled,
-                onCheckedChange = onToggle,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.primary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            )
-        }
-        if (updateEnabled) {
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = amount,
-                onValueChange = onAmountChange,
-                label = { Text("New Account Balance") },
-                modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done
-                ),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                )
-            )
-        }
-    }
-}
-
-@Composable
 fun SegmentedControl(
     items: List<String>,
     selectedIndex: Int,
@@ -734,18 +783,6 @@ fun TradeEntryScreenPreviewDark() {
 @Composable
 fun ScreenshotUploadSectionPreview() {
     ProfitPathTheme { Surface { ScreenshotUploadSection(null) {} } }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun OptionalBalanceUpdatePreview() {
-    ProfitPathTheme {
-        Surface {
-            var update by remember { mutableStateOf(true) }
-            var text by remember { mutableStateOf(TextFieldValue("1000.00")) }
-            OptionalBalanceUpdate(update,text, { update = it }, { text = it})
-        }
-    }
 }
 
 @Preview(showBackground = true)

@@ -196,6 +196,7 @@ fun MainAppScaffold(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = !(nestedCurrentRoute?.startsWith("edit_trade?tradeId=") == true),
         drawerContent = {
             AppDrawerContent(
                 drawerItems = drawerNavItems,
@@ -216,34 +217,54 @@ fun MainAppScaffold(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text(actualCurrentScreenTitle) },
-                    navigationIcon = {
-                        if (actualShowBackButton) {
-                            IconButton(onClick = { mainAppNavController.popBackStack() }) { // Use new NavController
+                val isEditScreen = nestedCurrentRoute?.startsWith("edit_trade?tradeId=") == true
+                if (isEditScreen) {
+                    TopAppBar(
+                        title = {},
+                        navigationIcon = {
+                            IconButton(onClick = { mainAppNavController.popBackStack() }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                             }
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(painterResource(id = R.drawable.ic_burger_menu_placeholder), contentDescription = "Open Navigation Drawer")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                        },
+                        actions = {},
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                        )
                     )
-                )
+                } else {
+                    TopAppBar(
+                        title = { Text(actualCurrentScreenTitle) },
+                        navigationIcon = {
+                            if (actualShowBackButton) {
+                                IconButton(onClick = { mainAppNavController.popBackStack() }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(painterResource(id = R.drawable.ic_burger_menu_placeholder), contentDescription = "Open Navigation Drawer")
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                            actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
             },
             bottomBar = {
-                if (showBottomNav) {
+                val isEditScreen = nestedCurrentRoute?.startsWith("edit_trade?tradeId=") == true
+                if (showBottomNav && !isEditScreen) {
                     AppBottomNavigationBar(
                         currentRoute = nestedCurrentRoute, // Pass nestedCurrentRoute
                         onNavigate = { route ->
-                            mainAppNavController.navigate(route) { // Use new NavController
+                            mainAppNavController.navigate(route) {
                                 popUpTo(mainAppNavController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
@@ -260,15 +281,26 @@ fun MainAppScaffold(
                 startDestination = Screen.Home.route, 
                 modifier = Modifier.padding(innerPadding)
             ) {
+                // Home Screen
                 composable(Screen.Home.route) {
                     HomeScreen()
                 }
+                // Trade Entry Screen (new entry only)
                 composable(Screen.TradeEntry.route) {
-                    TradeEntryScreen(navController = mainAppNavController) // Pass NavController
+                    TradeEntryScreen(navController = mainAppNavController, tradeId = null)
                 }
+                // Trade History Screen
                 composable(Screen.TradeHistory.route) {
                     TradeHistoryScreen(navController = mainAppNavController)
                 }
+                // Edit Trade (special route, not in bottom nav)
+                composable("edit_trade?tradeId={tradeId}",
+                    arguments = listOf(navArgument("tradeId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val tradeId = backStackEntry.arguments?.getString("tradeId") ?: ""
+                    com.dummbroke.profitpath.ui.trade_entry.EditTradeScreen(navController = mainAppNavController, tradeId = tradeId)
+                }
+                // Other screens (performance, settings, etc.)
                 composable(Screen.PerformanceSummary.route) {
                     PerformanceScreen()
                 }

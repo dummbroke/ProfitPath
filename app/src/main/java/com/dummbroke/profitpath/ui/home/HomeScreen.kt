@@ -43,8 +43,7 @@ data class UserProfile(
 )
 
 data class AccountBalanceInfo(
-    val balance: Double,
-    val dailyChangePercentage: Double
+    val balance: Double
 )
 
 data class TradeStatItem(
@@ -134,23 +133,6 @@ fun BalanceOverview(accountBalanceInfo: AccountBalanceInfo) {
                 fontSize = 20.sp,
                 color = MaterialTheme.colorScheme.onBackground // Updated color
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val changeColor = if (accountBalanceInfo.dailyChangePercentage >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error // Updated colors
-                val arrowResource = if (accountBalanceInfo.dailyChangePercentage >= 0) R.drawable.ic_upward else R.drawable.ic_downward
-
-                Image(
-                    painter = painterResource(id = arrowResource),
-                    contentDescription = "Daily Change",
-                    colorFilter = ColorFilter.tint(changeColor),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "${"%.1f".format(accountBalanceInfo.dailyChangePercentage)}%",
-                    fontSize = 14.sp,
-                    color = changeColor
-                )
-            }
         }
     }
 }
@@ -160,7 +142,7 @@ fun BalanceOverview(accountBalanceInfo: AccountBalanceInfo) {
 fun BalanceOverviewPreview() {
     ProfitPathTheme { // Wrapped in Theme
         Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(8.dp)) { // Updated color
-            BalanceOverview(AccountBalanceInfo(25000.0, -0.5))
+            BalanceOverview(AccountBalanceInfo(25000.0))
         }
     }
 }
@@ -184,7 +166,7 @@ fun HeaderSectionPreview() {
         Surface(
             color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(16.dp) // Updated color
         ) {
-            HeaderSection(UserProfile("Keen Thomas", "Swing Trader"), AccountBalanceInfo(12345.67, 2.5)
+            HeaderSection(UserProfile("Keen Thomas", "Swing Trader"), AccountBalanceInfo(12345.67)
             )
         }
     }
@@ -458,8 +440,7 @@ fun HomeScreen(
         tradingStyle = getTradingStyleDisplayName(userProfile?.tradingStyle ?: "")
     )
     val accountBalanceInfo = AccountBalanceInfo(
-        balance = userProfile?.balance ?: 0.0,
-        dailyChangePercentage = 0.0 // Placeholder, you can fetch/compute this if needed
+        balance = userProfile?.balance ?: 0.0
     )
     val tradeStats = viewModel.tradeStats.collectAsState().value
     val tradeSummaryItems = listOf(

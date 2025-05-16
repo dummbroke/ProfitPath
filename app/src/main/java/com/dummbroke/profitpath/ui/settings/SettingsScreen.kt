@@ -56,6 +56,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -207,6 +208,19 @@ fun SettingsScreen(
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
             )
+            Button(
+                onClick = { 
+                    val balanceValue = localCurrentBalance.text.toDoubleOrNull() ?: 0.0
+                    settingsViewModel.updateCurrentBalance(balanceValue, resetAnchor = true)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Text("Reset Anchor Balance to Current", color = MaterialTheme.colorScheme.onSecondaryContainer)
+            }
             SettingItem(iconRes = R.drawable.ic_settings_export_json_placeholder, title = "Export Trades to JSON", isClickable = true, onClick = { /* TODO: Handle JSON Export */ }) {}
             SettingItem(iconRes = R.drawable.ic_settings_export_csv_placeholder, title = "Export Trades to CSV", isClickable = true, onClick = { /* TODO: Handle CSV Export */ }) {}
             SettingItem(iconRes = R.drawable.ic_settings_cloud_sync_placeholder, title = "Cloud Sync Status", subtitle = cloudSyncStatus)
@@ -575,6 +589,10 @@ fun ChangePasswordDialog(
     var new by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    // Password visibility toggles
+    var currentVisible by remember { mutableStateOf(false) }
+    var newVisible by remember { mutableStateOf(false) }
+    var confirmVisible by remember { mutableStateOf(false) }
 
     BasicAlertDialog(
         onDismissRequest = onDismiss,
@@ -590,24 +608,57 @@ fun ChangePasswordDialog(
                         value = current,
                         onValueChange = { current = it },
                         label = { Text("Current Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true
+                        visualTransformation = if (currentVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        singleLine = true,
+                        trailingIcon = {
+                            val image = if (currentVisible)
+                                painterResource(id = R.drawable.ic_visibility_on)
+                            else painterResource(id = R.drawable.ic_visibility_off)
+                            IconButton(onClick = { currentVisible = !currentVisible }) {
+                                Icon(
+                                    painter = image,
+                                    contentDescription = if (currentVisible) "Hide password" else "Show password"
+                                )
+                            }
+                        }
                     )
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = new,
                         onValueChange = { new = it },
                         label = { Text("New Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true
+                        visualTransformation = if (newVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        singleLine = true,
+                        trailingIcon = {
+                            val image = if (newVisible)
+                                painterResource(id = R.drawable.ic_visibility_on)
+                            else painterResource(id = R.drawable.ic_visibility_off)
+                            IconButton(onClick = { newVisible = !newVisible }) {
+                                Icon(
+                                    painter = image,
+                                    contentDescription = if (newVisible) "Hide password" else "Show password"
+                                )
+                            }
+                        }
                     )
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = confirm,
                         onValueChange = { confirm = it },
                         label = { Text("Confirm New Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true
+                        visualTransformation = if (confirmVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        singleLine = true,
+                        trailingIcon = {
+                            val image = if (confirmVisible)
+                                painterResource(id = R.drawable.ic_visibility_on)
+                            else painterResource(id = R.drawable.ic_visibility_off)
+                            IconButton(onClick = { confirmVisible = !confirmVisible }) {
+                                Icon(
+                                    painter = image,
+                                    contentDescription = if (confirmVisible) "Hide password" else "Show password"
+                                )
+                            }
+                        }
                     )
                     error?.let {
                         Text(it, color = MaterialTheme.colorScheme.error)
