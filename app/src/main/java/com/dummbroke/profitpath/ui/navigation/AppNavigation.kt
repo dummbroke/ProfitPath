@@ -31,6 +31,12 @@ import com.dummbroke.profitpath.ui.trade_entry.TradeEntryScreen
 import com.dummbroke.profitpath.ui.trade_history.TradeHistoryScreen
 import com.dummbroke.profitpath.ui.settings.SettingsViewModel
 import kotlinx.coroutines.launch
+import com.dummbroke.profitpath.ui.trade_asset.TradeAssetScreen
+import com.dummbroke.profitpath.ui.airdrops.AirdropsScreen
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 
 object AuthDestinations {
     const val SignIn = "signIn"
@@ -184,6 +190,8 @@ fun MainAppScaffold(
         Screen.TradeHistory.route -> Screen.TradeHistory.title
         Screen.PerformanceSummary.route -> Screen.PerformanceSummary.title
         Screen.Settings.route -> Screen.Settings.title
+        Screen.TradeAsset.route -> "Manage Assets"
+        Screen.Airdrops.route -> "Airdrops"
         else -> "ProfitPath"
     }
 
@@ -194,27 +202,7 @@ fun MainAppScaffold(
     }
     val showBottomNav = bottomNavItems.any { it.route == nestedCurrentRoute }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = !(nestedCurrentRoute?.startsWith("edit_trade?tradeId=") == true),
-        drawerContent = {
-            AppDrawerContent(
-                drawerItems = drawerNavItems,
-                currentRoute = nestedCurrentRoute, // Pass nestedCurrentRoute
-                navigateToScreen = { route ->
-                    scope.launch { drawerState.close() }
-                    mainAppNavController.navigate(route) { // Use new NavController
-                        popUpTo(mainAppNavController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                closeDrawer = { scope.launch { drawerState.close() } }
-            )
-        }
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
                 val isEditScreen = nestedCurrentRoute?.startsWith("edit_trade?tradeId=") == true
@@ -310,7 +298,46 @@ fun MainAppScaffold(
                 composable(Screen.TradeAsset.route) {
                     com.dummbroke.profitpath.ui.trade_asset.TradeAssetScreen()
                 }
+                composable(Screen.Airdrops.route) {
+                    AirdropsScreen()
+                }
                 // Removed SingleTradeView navigation
+            }
+        }
+        // Right-side drawer overlay
+        AnimatedVisibility(
+            visible = drawerState.isOpen,
+            enter = slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(300)
+            ),
+            exit = slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth },
+                animationSpec = tween(300)
+            ),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(320.dp)
+                    .align(Alignment.TopEnd)
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                AppDrawerContent(
+                    drawerItems = drawerNavItems,
+                    currentRoute = nestedCurrentRoute,
+                    navigateToScreen = { route ->
+                        scope.launch { drawerState.close() }
+                        mainAppNavController.navigate(route) {
+                            popUpTo(mainAppNavController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    closeDrawer = { scope.launch { drawerState.close() } }
+                )
             }
         }
     }

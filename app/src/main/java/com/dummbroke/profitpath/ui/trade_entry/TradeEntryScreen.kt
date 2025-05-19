@@ -50,6 +50,13 @@ import com.dummbroke.profitpath.ui.trade_asset.TradeAssetViewModel
 import com.dummbroke.profitpath.ui.trade_asset.Asset
 import com.google.firebase.auth.FirebaseAuth
 import com.dummbroke.profitpath.ui.performance.PerformanceViewModel
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.material3.Checkbox
+import java.util.concurrent.TimeUnit
+
+private const val PREFS_NAME = "TradeEntryGuidePrefs"
+private const val KEY_LAST_SHOWN_DATE = "last_shown_date"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -164,6 +171,34 @@ fun TradeEntryScreen(
     val assetViewModel: TradeAssetViewModel = viewModel()
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     val userAssets by assetViewModel.assets.collectAsState()
+
+    // --- Guide Dialog State and Logic ---
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    var showGuideDialog by remember { mutableStateOf(false) }
+    var dontShowAgainChecked by remember { mutableStateOf(false) }
+
+    val lastShownTimestamp = remember { prefs.getLong(KEY_LAST_SHOWN_DATE, 0L) }
+    val oneWeekInMillis = TimeUnit.DAYS.toMillis(7)
+
+    LaunchedEffect(userId, userAssets, lastShownTimestamp) {
+        // Show guide if no assets are added and it hasn't been shown this week
+        val currentTime = System.currentTimeMillis()
+        val shouldShow = userId.isNotBlank() && userAssets.isEmpty() &&
+                         (currentTime - lastShownTimestamp > oneWeekInMillis)
+        
+        if (shouldShow) {
+            showGuideDialog = true
+        }
+    }
+
+    fun dismissGuideDialog() {
+        if (dontShowAgainChecked) {
+            prefs.edit().putLong(KEY_LAST_SHOWN_DATE, System.currentTimeMillis()).apply()
+        }
+        showGuideDialog = false
+    }
+    // --- End Guide Dialog State and Logic ---
+
     LaunchedEffect(userId) {
         if (userId.isNotBlank()) assetViewModel.fetchAssets(userId)
     }
@@ -382,7 +417,97 @@ fun TradeEntryScreen(
                 }
             }
         }
+
+        // --- Guide Dialog ---
+        val guideSteps = remember { listOf(
+            Pair(R.drawable.guide_1, "When adding a new trade entry, you need to specify the asset you traded. If the asset you need is not listed in the 'Select Asset' dropdown, you'll need to add it first."),
+            Pair(R.drawable.guide_2, "To add a new asset, open the navigation drawer (burger menu) from the top bar and select 'Manage Assets'."),
+            Pair(R.drawable.guide_3, "On the 'Manage Assets' screen, tap the '+' button in the top right corner to add a new asset."),
+            Pair(R.drawable.guide_4, "Fill in the details for the new asset: enter the Asset Name (e.g., XAU/USD, AAPL) and select the Asset Type (Forex, Crypto, Stocks) from the dropdown."),
+            Pair(R.drawable.guide_5, "Tap 'Save' to add the asset. Once saved, it will appear in your list of assets and will be available in the 'Select Asset' dropdown on the Trade Entry screen.")
+        ) }
+
+        if (showGuideDialog) {
+            AssetGuideDialog(
+                guideSteps = guideSteps,
+                dontShowAgainChecked = dontShowAgainChecked,
+                onCheckedChange = { dontShowAgainChecked = it },
+                onDismiss = { dismissGuideDialog() }
+            )
+        }
+        // --- End Guide Dialog ---
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AssetGuideDialog(
+    guideSteps: List<Pair<Int, String>>,
+    dontShowAgainChecked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var currentStep by remember { mutableStateOf(0) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("How to Add Assets") },
+        text = {
+            Column {
+                // Display Image
+                Image(
+                    painter = painterResource(id = guideSteps[currentStep].first),
+                    contentDescription = null, // Decorative image
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Fit // Use Fit to prevent distortion
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                // Display Text Instruction
+                Text(
+                    text = "Step ${currentStep + 1}/${guideSteps.size}: ${guideSteps[currentStep].second}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                // Navigation Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = { currentStep-- },
+                        enabled = currentStep > 0
+                    ) {
+                        Text("Previous")
+                    }
+                    Button(
+                        onClick = { currentStep++ },
+                        enabled = currentStep < guideSteps.size - 1
+                    ) {
+                        Text("Next")
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                // "Don't show again" Checkbox
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = dontShowAgainChecked,
+                        onCheckedChange = onCheckedChange
+                    )
+                    Text("Don't show this guide again this week", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }
 
 @Composable

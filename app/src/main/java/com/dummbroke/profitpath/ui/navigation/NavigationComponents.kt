@@ -49,6 +49,7 @@ object NavDrawables {
     val ic_nav_performance = R.drawable.ic_nav_performance_placeholder
     val ic_nav_settings = R.drawable.ic_settings_placeholder // Example name, ensure this drawable exists
     val ic_nav_asset = R.drawable.ic_nav_asset_placeholder // Add this drawable for asset management
+    val ic_nav_airdrops = R.drawable.ic_nav_airdrops_placeholder // Add this drawable for airdrops
 }
 
 sealed class Screen(
@@ -62,6 +63,7 @@ sealed class Screen(
     object PerformanceSummary : Screen("performance_summary", "Performance", NavDrawables.ic_nav_performance)
     object Settings : Screen("settings", "Settings", NavDrawables.ic_nav_settings)
     object TradeAsset : Screen("trade_asset", "Manage Assets", NavDrawables.ic_nav_asset)
+    object Airdrops : Screen("airdrops", "Airdrops", NavDrawables.ic_nav_airdrops)
 }
 
 val bottomNavItems = listOf(
@@ -74,7 +76,8 @@ val bottomNavItems = listOf(
 val drawerNavItems = listOf(
     Screen.PerformanceSummary,
     Screen.Settings,
-    Screen.TradeAsset
+    Screen.TradeAsset,
+    Screen.Airdrops
 )
 
 @Composable
