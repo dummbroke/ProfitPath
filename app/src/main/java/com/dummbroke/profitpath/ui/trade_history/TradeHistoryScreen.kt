@@ -548,11 +548,12 @@ fun TradeCard(tradeId: String, trade: Trade, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TradeScreenshotDisplay(screenshotUri: String?) {
+private fun TradeScreenshotDisplay(screenshotUri: String?, onImageClick: (() -> Unit)? = null) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp),
+            .height(200.dp)
+            .then(if (onImageClick != null && screenshotUri != null && screenshotUri.isNotBlank()) Modifier.clickable { onImageClick() } else Modifier),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -708,6 +709,7 @@ fun TradeDetailDialog(
     onDelete: (() -> Unit)? = null
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showImageExpanded by remember { mutableStateOf(false) }
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
@@ -723,6 +725,40 @@ fun TradeDetailDialog(
                 TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             }
         )
+    }
+    if (showImageExpanded && tradeDetail.screenshotUri != null && tradeDetail.screenshotUri.isNotBlank()) {
+        Dialog(onDismissRequest = { showImageExpanded = false }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(tradeDetail.screenshotUri),
+                    contentDescription = "Expanded Trade Screenshot",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1.6f)
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Fit
+                )
+                IconButton(
+                    onClick = { showImageExpanded = false },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(24.dp)
+                        .size(40.dp)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert, // Replace with a close icon if available
+                        contentDescription = "Close Image",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
     }
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismissRequest) {
         Card(
@@ -744,7 +780,14 @@ fun TradeDetailDialog(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    item { TradeScreenshotDisplay(tradeDetail.screenshotUri) }
+                    item {
+                        TradeScreenshotDisplay(
+                            screenshotUri = tradeDetail.screenshotUri,
+                            onImageClick = if (tradeDetail.screenshotUri != null && tradeDetail.screenshotUri.isNotBlank()) {
+                                { showImageExpanded = true }
+                            } else null
+                        )
+                    }
                     item { SectionTitle("Trade Overview") }
                     item { TradeInfoSection(tradeDetail) }
                     item { SectionTitle("Performance Metrics") }
