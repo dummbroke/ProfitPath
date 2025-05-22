@@ -26,7 +26,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 // User Profile Data Class
 data class UserProfile(
     val email: String = "",
-    val displayName: String = "",
+    val name: String = "Trader",
     val tradingStyle: String = "day_trader", // Default style
     val currentBalance: Double = 0.0
 )
@@ -47,24 +47,27 @@ class SettingsRepository(private val context: Context) { // Accept Context
     fun getUserProfile(): Flow<UserProfile?> = flow {
         val userId = getCurrentUserId()
         if (userId == null) {
-            emit(UserProfile(email = getUserEmail() ?: "")) // Emit profile with email only if no user ID (e.g. not fully logged in)
+            val email = getUserEmail() ?: ""
+            val name = firebaseAuth.currentUser?.displayName ?: email.substringBefore('@').ifBlank { "Trader" }
+            emit(UserProfile(email = email, name = name))
             return@flow
         }
         val docRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
-        
         val snapshot = docRef.get().await()
         if (snapshot.exists()) {
             val profile = snapshot.toObject(UserProfile::class.java)
-            // Ensure email from auth is part of the emitted profile, as it's not stored in Firestore doc directly here
-            emit(profile?.copy(email = getUserEmail() ?: profile.email))
+            val email = getUserEmail() ?: profile?.email ?: ""
+            val name = profile?.name ?: firebaseAuth.currentUser?.displayName ?: email.substringBefore('@').ifBlank { "Trader" }
+            emit(profile?.copy(email = email, name = name))
         } else {
-            // User profile document doesn't exist, emit default profile with email
-            // This is also where we ensure a new user gets a 0.0 balance.
-            emit(UserProfile(email = getUserEmail() ?: "", currentBalance = 0.0, displayName = firebaseAuth.currentUser?.displayName ?: ""))
+            val email = getUserEmail() ?: ""
+            val name = firebaseAuth.currentUser?.displayName ?: email.substringBefore('@').ifBlank { "Trader" }
+            emit(UserProfile(email = email, name = name, currentBalance = 0.0))
         }
     }.catch { e ->
-        // Log error or handle it
-        emit(UserProfile(email = getUserEmail() ?: "", currentBalance = 0.0)) // Emit default on error
+        val email = getUserEmail() ?: ""
+        val name = firebaseAuth.currentUser?.displayName ?: email.substringBefore('@').ifBlank { "Trader" }
+        emit(UserProfile(email = email, name = name, currentBalance = 0.0))
     }
 
     suspend fun updateDisplayName(name: String): Result<Unit> {
@@ -74,7 +77,7 @@ class SettingsRepository(private val context: Context) { // Accept Context
             val profileDocRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
             profileDocRef.set(
                 mapOf(
-                    "displayName" to name,
+                    "name" to name,
                     "lastSynced" to com.google.firebase.firestore.FieldValue.serverTimestamp()
                 ),
                 SetOptions.merge()

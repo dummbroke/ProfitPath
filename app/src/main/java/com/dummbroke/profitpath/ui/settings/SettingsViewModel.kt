@@ -54,7 +54,7 @@ class SettingsViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Loading...")
 
     val traderName: StateFlow<String> = userProfileFlow
-        .map { it?.displayName ?: "" }
+        .map { it?.name ?: "" }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     val tradingStyle: StateFlow<String> = userProfileFlow

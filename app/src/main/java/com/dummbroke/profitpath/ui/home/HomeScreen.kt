@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -72,9 +73,10 @@ data class RecentTradeItem(
 // val TradingViewRed = Color(0xFFEF5350)
 
 @Composable
-fun ProfileInfo(userProfile: UserProfile){
+fun ProfileInfo(userProfile: UserProfile) {
     Row(
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Image(
             imageVector = Icons.Default.AccountCircle,
@@ -82,21 +84,27 @@ fun ProfileInfo(userProfile: UserProfile){
             modifier = Modifier
                 .size(50.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surface), // Updated color
+                .background(MaterialTheme.colorScheme.surface),
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Column {
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
             Text(
                 text = userProfile.name,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground // Updated color
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = userProfile.tradingStyle,
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface // Updated color for secondary text
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -158,7 +166,10 @@ fun HeaderSection(userProfile: UserProfile, accountBalanceInfo: AccountBalanceIn
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ){
-        ProfileInfo(userProfile)
+        Box(modifier = Modifier.weight(1f)) {
+            ProfileInfo(userProfile)
+        }
+        Spacer(modifier = Modifier.width(8.dp))
         BalanceOverview(accountBalanceInfo, onClick = onBalanceClick)
     }
 }
@@ -513,6 +524,7 @@ fun getTradingStyleDisplayName(styleId: String): String {
         "position_trader" -> "Position Trader"
         "investor" -> "Investor"
         "other" -> "Other"
+        "" -> "No Style"
         else -> styleId.replaceFirstChar { it.uppercase() }.replace('_', ' ')
     }
 }

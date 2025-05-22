@@ -480,8 +480,9 @@ fun AssetGuideDialog(
                     contentDescription = null, // Decorative image
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .aspectRatio(1.6f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentScale = ContentScale.Fit // Use Fit to prevent distortion
                 )
                 Spacer(modifier = Modifier.height(16.dp))

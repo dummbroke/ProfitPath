@@ -178,7 +178,7 @@ fun Trade.toTradeDetailData(id: String): TradeDetailData {
         id = id,
         assetPair = this.specificAsset ?: "N/A",
         assetClass = this.assetClass ?: "N/A",
-        date = this.tradeDate?.toDate()?.let { java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(it) } ?: "N/A",
+        date = this.tradeDate?.toDate()?.let { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it) } ?: "N/A",
         strategy = this.strategyUsed ?: "N/A",
         marketCondition = this.marketCondition ?: "N/A",
         positionType = this.positionType ?: "N/A",
@@ -194,8 +194,8 @@ fun Trade.toTradeDetailData(id: String): TradeDetailData {
         tags = this.tags ?: emptyList(),
         screenshotUri = this.screenshotPath,
         percentagePnl = this.percentagePnl,
-        exitTimestamp = this.exitTimestamp?.toDate()?.let { java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(it) },
-        entryClientTimestamp = this.entryClientTimestamp?.toDate()?.let { java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(it) },
+        exitTimestamp = this.exitTimestamp?.toDate()?.let { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(it) },
+        entryClientTimestamp = this.entryClientTimestamp?.toDate()?.let { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(it) },
         balanceUpdated = this.balanceUpdated,
         leverage = this.leverage
     )
@@ -254,6 +254,9 @@ fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistory
         }
         matchesSearch && matchesAssetClass && matchesStrategy && matchesOutcome && matchesMarketCondition && matchesDate
     }
+
+    // Show latest trades at the top
+    val sortedFilteredTrades = filteredTrades.asReversed()
 
     if (showDetailDialog && selectedTradeIdForDialog != null) {
         val trade = trades.find { it.first == selectedTradeIdForDialog }?.second
@@ -387,7 +390,7 @@ fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistory
                         }
                     }
                     is TradeHistoryUiState.Success -> {
-                        if (filteredTrades.isEmpty()) {
+                        if (sortedFilteredTrades.isEmpty()) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
@@ -399,7 +402,7 @@ fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistory
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                items(filteredTrades, key = { it.first }) { (tradeId, trade) ->
+                                items(sortedFilteredTrades, key = { it.first }) { (tradeId, trade) ->
                                     TradeCard(tradeId = tradeId, trade = trade, onClick = {
                                         selectedTradeIdForDialog = tradeId
                                         showDetailDialog = true
@@ -518,8 +521,11 @@ fun TradeCard(tradeId: String, trade: Trade, onClick: () -> Unit) {
 
             // Trade Info Column
             Column(modifier = Modifier.weight(1f)) {
+                val formattedDate = trade.tradeDate?.toDate()?.let {
+                    SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it)
+                } ?: "N/A"
                 Text(
-                    text = "${trade.specificAsset ?: "N/A"} - " + (trade.tradeDate?.toDate()?.let { java.text.SimpleDateFormat("yyyy-MM-dd").format(it) } ?: "N/A"),
+                    text = "${trade.specificAsset ?: "N/A"} - $formattedDate",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface

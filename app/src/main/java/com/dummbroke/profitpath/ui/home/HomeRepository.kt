@@ -40,7 +40,7 @@ class HomeRepository {
         val docRef = firestore.collection("users").document(userId).collection("profile").document("user_profile_data")
         val listener = docRef.addSnapshotListener { snapshot, _ ->
             if (snapshot != null && snapshot.exists()) {
-                val name = snapshot.getString("displayName") ?: ""
+                val name = snapshot.getString("name") ?: "Trader Name"
                 val tradingStyle = snapshot.getString("tradingStyle") ?: ""
                 val balance = snapshot.getDouble("currentBalance") ?: 0.0
                 trySend(HomeUserProfile(name, tradingStyle, balance))

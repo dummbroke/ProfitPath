@@ -73,9 +73,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.gestures.ScrollableState
 import com.dummbroke.profitpath.ui.navigation.AdMobBanner
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 
 // --- Data Models (if needed, for complex settings) ---
-data class TradingStyleOption(val id: String, val displayName: String)
+data class TradingStyleOption(val id: String, val name: String)
 
 // Define keys for scroll targets
 private const val SCROLL_TARGET_BALANCE = "balance_input"
@@ -165,6 +168,8 @@ fun SettingsScreen(
         }
     }
 
+    val context = LocalContext.current
+
     Column {
         AdMobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
         Spacer(Modifier.height(8.dp))
@@ -208,7 +213,7 @@ fun SettingsScreen(
                 SettingItem(
                     iconRes = R.drawable.ic_settings_profile_style_placeholder,
                     title = "Preferred Trading Style",
-                    subtitle = tradingStyles.find { it.id == tradingStyle }?.displayName ?: "Select Style",
+                    subtitle = tradingStyles.find { it.id == tradingStyle }?.name ?: "Select Style",
                     isClickable = true,
                     onClick = { showTradingStyleDialog = true }
                 )
@@ -255,7 +260,25 @@ fun SettingsScreen(
                 ) {}
                 SettingItem(iconRes = R.drawable.ic_settings_privacy_policy_placeholder, title = "Privacy Policy", isClickable = true, onClick = { showPrivacyPolicyDialog = true }) {}
                 SettingItem(iconRes = R.drawable.ic_settings_terms_service_placeholder, title = "Terms of Service", isClickable = true, onClick = { showTermsDialog = true }) {}
-                SettingItem(iconRes = R.drawable.ic_settings_send_feedback_placeholder, title = "Send Feedback", isClickable = true, onClick = { /* TODO: Open Email/Form */ }) {}
+                SettingItem(
+                    iconRes = R.drawable.ic_settings_send_feedback_placeholder,
+                    title = "Send Feedback",
+                    isClickable = true,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse("mailto:")
+                            putExtra(Intent.EXTRA_EMAIL, arrayOf("profitpath0215@gmail.com"))
+                            putExtra(Intent.EXTRA_SUBJECT, "Profit Path Feedback")
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("No email client found.")
+                            }
+                        }
+                    }
+                ) {}
                 SettingItem(iconRes = R.drawable.ic_settings_rate_app_placeholder, title = "Rate App", isClickable = true, onClick = { /* TODO: Open Play Store */ }) {}
             }
         }
@@ -588,7 +611,7 @@ fun TradingStyleSelectionDialog(
                                     colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
                                 Spacer(Modifier.width(16.dp))
-                                Text(styleOption.displayName, style = MaterialTheme.typography.bodyLarge)
+                                Text(styleOption.name, style = MaterialTheme.typography.bodyLarge)
                             }
                         }
                     }
