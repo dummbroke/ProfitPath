@@ -140,23 +140,52 @@ class PerformanceViewModel : ViewModel() {
             )
         }
 
-        val netPnL = trades.sumOf { it.pnlAmount ?: 0.0 }
-        val pnlPercentage = trades.sumOf { it.percentagePnl ?: 0.0 }
-        val totalTrades = trades.size
-        val wins = trades.filter { it.outcome.equals("Win", ignoreCase = true) }
-        val losses = trades.filter { it.outcome.equals("Loss", ignoreCase = true) }
+        // Filter out shadow trades (trades with null or zero PnL)
+        val calculableTrades = trades.filter { it.pnlAmount != null && it.pnlAmount != 0.0 }
+
+        if (calculableTrades.isEmpty()) {
+            return PerformanceOverview(
+                currentBalance = currentBalance,
+                netPnL = 0.0,
+                pnlPercentage = 0.0,
+                totalTrades = 0,
+                winRate = 0.0,
+                bestTrade = 0.0,
+                worstTrade = 0.0,
+                profitFactor = 0.0,
+                expectancy = 0.0,
+                avgWin = 0.0,
+                avgLoss = 0.0,
+                avgHoldingTime = "0m",
+                longestWinStreak = 0,
+                longestLossStreak = 0,
+                maxDrawdown = calculateMaxDrawdown(trades), // Still calculate drawdown based on all trades with balance updates
+                bestDayPnl = 0.0,
+                worstDayPnl = 0.0
+            )
+        }
+
+        val netPnL = calculableTrades.sumOf { it.pnlAmount!! }
+        // Recalculate percentagePnl based on entry amount for calculable trades
+        val pnlPercentage = if (calculableTrades.isNotEmpty()) {
+            calculableTrades.sumOf { it.percentagePnl ?: 0.0 }
+        } else 0.0
+        val totalTrades = calculableTrades.size
+        val wins = calculableTrades.filter { it.outcome.equals("Win", ignoreCase = true) }
+        val losses = calculableTrades.filter { it.outcome.equals("Loss", ignoreCase = true) }
         val winRate = if (totalTrades > 0) wins.size.toDouble() / totalTrades else 0.0
-        val bestTrade = trades.maxOfOrNull { it.pnlAmount ?: 0.0 } ?: 0.0
-        val worstTrade = trades.minOfOrNull { it.pnlAmount ?: 0.0 } ?: 0.0
-        val grossProfit = wins.sumOf { it.pnlAmount ?: 0.0 }
-        val grossLoss = losses.sumOf { it.pnlAmount?.let { amt -> if (amt < 0) amt else 0.0 } ?: 0.0 }.let { kotlin.math.abs(it) }
-        val profitFactor = if (grossLoss > 0) grossProfit / grossLoss else 0.0
-        val avgWin = if (wins.isNotEmpty()) wins.mapNotNull { it.pnlAmount }.average() else 0.0
-        val avgLoss = if (losses.isNotEmpty()) losses.mapNotNull { it.pnlAmount }.average() else 0.0
+        val bestTrade = calculableTrades.maxOfOrNull { it.pnlAmount!! } ?: 0.0
+        val worstTrade = calculableTrades.minOfOrNull { it.pnlAmount!! } ?: 0.0
+        val grossProfit = wins.sumOf { it.pnlAmount!! }
+        val grossLoss = losses.sumOf { it.pnlAmount!!.let { amt -> if (amt < 0) amt else 0.0 } }.let { kotlin.math.abs(it) }
+        val profitFactor = if (grossLoss > 0.0) grossProfit / grossLoss else 0.0 // Handle division by zero
+        val avgWin = if (wins.isNotEmpty()) wins.map { it.pnlAmount!! }.average() else 0.0
+        val avgLoss = if (losses.isNotEmpty()) losses.map { it.pnlAmount!! }.average() else 0.0
         val expectancy = (winRate * avgWin) + ((1 - winRate) * avgLoss)
-        val avgHoldingTime = calculateAvgHoldingTime(trades)
-        val (longestWinStreak, longestLossStreak) = calculateStreaks(trades)
-        val (bestDayPnl, worstDayPnl) = calculateBestWorstDayPnL(trades)
+        // Holding time, streaks, and daily PnL should still consider all filtered trades (including shadow for context)
+        val avgHoldingTime = calculateAvgHoldingTime(trades) // Use all filtered trades
+        val (longestWinStreak, longestLossStreak) = calculateStreaks(trades) // Use all filtered trades
+        val (bestDayPnl, worstDayPnl) = calculateBestWorstDayPnL(trades) // Use all filtered trades
         val maxDrawdown = calculateMaxDrawdown(trades)
 
         return PerformanceOverview(

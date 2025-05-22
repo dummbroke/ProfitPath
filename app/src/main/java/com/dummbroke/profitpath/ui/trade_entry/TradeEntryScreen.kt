@@ -316,10 +316,23 @@ fun TradeEntryScreen(
 
             item { SectionTitle("Outcome & Notes") }
             item { WinLossToggle(isWin) { isWin = it } }
-            item { PriceInputTextField(label = "P&L Amount (e.g., 50.75 or -20.10)", value = pnlAmountStr, onValueChange = {pnlAmountStr = it}, imeAction = ImeAction.Next) }
+            item { PriceInputTextField(
+                label = "P&L Amount (e.g., 50.75 or -20.10)",
+                value = pnlAmountStr,
+                onValueChange = {pnlAmountStr = it},
+                imeAction = ImeAction.Next,
+                placeholder = "(Optional, for shadow trades)"
+            ) }
             item { DatePickerField(tradeDate) { showDatePickerDialog = true } }
 
-            item { PriceInputTextField(label = "Entry Amount (USD)", value = entryAmountUSDStr, onValueChange = { entryAmountUSDStr = it }, keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next) }
+            item { PriceInputTextField(
+                label = "Entry Amount (USD)",
+                value = entryAmountUSDStr,
+                onValueChange = { entryAmountUSDStr = it },
+                keyboardType = KeyboardType.Decimal,
+                imeAction = ImeAction.Next,
+                placeholder = "(Optional, for shadow trades)"
+            ) }
             
             item { MultiLineTextField(label = "Pre-Trade Rationale / Setup", value = preTradeRationale, onValueChange = { preTradeRationale = it }) }
             item { MultiLineTextField(label = "Execution Notes", value = executionNotes, onValueChange = { executionNotes = it }) }
@@ -786,7 +799,8 @@ fun PriceInputTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     imeAction: ImeAction = ImeAction.Next,
-    keyboardType: KeyboardType = KeyboardType.Number
+    keyboardType: KeyboardType = KeyboardType.Number,
+    placeholder: String = ""
 ) {
     OutlinedTextField(
         value = value,
@@ -801,7 +815,8 @@ fun PriceInputTextField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = MaterialTheme.colorScheme.outline
-        )
+        ),
+        placeholder = { Text(placeholder) }
     )
 }
 
