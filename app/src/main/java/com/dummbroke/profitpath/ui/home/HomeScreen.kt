@@ -3,6 +3,7 @@ package com.dummbroke.profitpath.ui.home
 import android.R.attr.shape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,6 +35,8 @@ import androidx.compose.runtime.collectAsState
 import com.dummbroke.profitpath.ui.home.TradeInsights
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 
 // --- Data Classes (Placeholders) ---
 data class UserProfile(
@@ -112,11 +115,12 @@ fun ProfileInfoPreview() {
 }
 
 @Composable
-fun BalanceOverview(accountBalanceInfo: AccountBalanceInfo) {
+fun BalanceOverview(accountBalanceInfo: AccountBalanceInfo, onClick: () -> Unit) {
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), // Updated color
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier.clickable { onClick() }
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -142,20 +146,20 @@ fun BalanceOverview(accountBalanceInfo: AccountBalanceInfo) {
 fun BalanceOverviewPreview() {
     ProfitPathTheme { // Wrapped in Theme
         Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(8.dp)) { // Updated color
-            BalanceOverview(AccountBalanceInfo(25000.0))
+            BalanceOverview(AccountBalanceInfo(25000.0), onClick = {})
         }
     }
 }
 
 @Composable
-fun HeaderSection(userProfile: UserProfile, accountBalanceInfo: AccountBalanceInfo) {
+fun HeaderSection(userProfile: UserProfile, accountBalanceInfo: AccountBalanceInfo, onBalanceClick: () -> Unit) {
     Row (
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ){
         ProfileInfo(userProfile)
-        BalanceOverview(accountBalanceInfo)
+        BalanceOverview(accountBalanceInfo, onClick = onBalanceClick)
     }
 }
 
@@ -166,8 +170,7 @@ fun HeaderSectionPreview() {
         Surface(
             color = MaterialTheme.colorScheme.background, modifier = Modifier.padding(16.dp) // Updated color
         ) {
-            HeaderSection(UserProfile("Keen Thomas", "Swing Trader"), AccountBalanceInfo(12345.67)
-            )
+            HeaderSection(UserProfile("Keen Thomas", "Swing Trader"), AccountBalanceInfo(12345.67), onBalanceClick = {})
         }
     }
 }
@@ -422,6 +425,7 @@ fun RecentTradesSectionEmptyPreview() {
 
 @Composable
 fun HomeScreen(
+    navController: NavController,
     viewModel: HomeViewModel = viewModel(),
     tradeStats: List<TradeStatItem> = listOf(
         TradeStatItem("Total Trades", "152"),
@@ -475,7 +479,7 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            item { HeaderSection(profile, accountBalanceInfo) }
+            item { HeaderSection(profile, accountBalanceInfo, onBalanceClick = { navController.navigate("settings?scrollTo=balance_input") }) }
             item { StatsSection(tradeSummaryItems) }
             item { InsightsSection(insights) }
             item { RecentTradesSection(recentTradeItems) }
@@ -487,7 +491,7 @@ fun HomeScreen(
 @Composable
 fun HomeScreenPreview() {
     ProfitPathTheme(darkTheme = true) { // Preview ensures dark theme
-        HomeScreen()
+        HomeScreen(navController = rememberNavController())
     }
 }
 
@@ -496,7 +500,7 @@ fun HomeScreenPreview() {
 fun HomeScreenPreviewLight() {
     ProfitPathTheme(darkTheme = false) { // Preview ensures light theme
         Surface(color = MaterialTheme.colorScheme.background) { // Surface is good for previews
-            HomeScreen()
+            HomeScreen(navController = rememberNavController())
         }
     }
 }

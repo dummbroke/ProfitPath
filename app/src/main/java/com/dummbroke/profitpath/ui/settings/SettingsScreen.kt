@@ -1,6 +1,7 @@
 package com.dummbroke.profitpath.ui.settings
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,7 +50,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,15 +68,23 @@ import com.dummbroke.profitpath.R
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.gestures.ScrollableState
 
 // --- Data Models (if needed, for complex settings) ---
 data class TradingStyleOption(val id: String, val displayName: String)
+
+// Define keys for scroll targets
+private const val SCROLL_TARGET_BALANCE = "balance_input"
 
 // --- Main Settings Screen Composable ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    settingsViewModel: SettingsViewModel = viewModel()
+    settingsViewModel: SettingsViewModel = viewModel(),
+    scrollToTarget: String? = null // Added scrollToTarget parameter
 ) {
     // Observe states from ViewModel
     val userEmail by settingsViewModel.userEmail.collectAsState()
@@ -118,6 +130,7 @@ fun SettingsScreen(
 
     var showPrivacyPolicyDialog by remember { mutableStateOf(false) }
     var showTermsDialog by remember { mutableStateOf(false) }
+    var showAddAssetGuideDialog by remember { mutableStateOf(false) }
 
     // Show feedback as Snackbar (for password change too)
     LaunchedEffect(operationFeedback, changePasswordResult) {
@@ -136,8 +149,23 @@ fun SettingsScreen(
     }
 
     val focusManager = LocalFocusManager.current
+    val listState = rememberLazyListState() // Remember LazyListState
+
+    // Scroll to the target item if specified
+    LaunchedEffect(scrollToTarget) {
+        if (scrollToTarget == SCROLL_TARGET_BALANCE) {
+            // Find the index of the balance input item
+            // This assumes the item with key=SCROLL_TARGET_BALANCE is in the list
+            listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == SCROLL_TARGET_BALANCE }?.let { itemInfo ->
+                listState.animateScrollToItem(itemInfo.index)
+            } ?: coroutineScope.launch { // Fallback if not immediately visible
+                 listState.scrollToItem(listState.layoutInfo.totalItemsCount) // Scroll to bottom as a fallback
+             } // A more robust solution might involve observing layoutInfo changes
+        }
+    }
 
     LazyColumn(
+        state = listState, // Assign the state to LazyColumn
         modifier = Modifier
             .fillMaxSize()
             .padding(bottom = 16.dp) // Padding at the very bottom of the list
@@ -194,7 +222,7 @@ fun SettingsScreen(
         }
 
         // Data & Sync Management Section
-        item {
+        item(key = SCROLL_TARGET_BALANCE) { // Assign key to the balance item
             SettingsSectionTitle("Data & Sync Management")
             EditableSettingItem(
                 title = "Current Account Balance (USD)",
@@ -215,6 +243,12 @@ fun SettingsScreen(
         item {
             SettingsSectionTitle("Application Information & Support")
             SettingItem(iconRes = R.drawable.ic_settings_app_info_placeholder, title = "App Version", subtitle = appVersion)
+            SettingItem(
+                iconRes = R.drawable.ic_settings_help_placeholder,
+                title = "How to Add Assets",
+                isClickable = true,
+                onClick = { showAddAssetGuideDialog = true }
+            ) {}
             SettingItem(iconRes = R.drawable.ic_settings_privacy_policy_placeholder, title = "Privacy Policy", isClickable = true, onClick = { showPrivacyPolicyDialog = true }) {}
             SettingItem(iconRes = R.drawable.ic_settings_terms_service_placeholder, title = "Terms of Service", isClickable = true, onClick = { showTermsDialog = true }) {}
             SettingItem(iconRes = R.drawable.ic_settings_send_feedback_placeholder, title = "Send Feedback", isClickable = true, onClick = { /* TODO: Open Email/Form */ }) {}
@@ -329,6 +363,13 @@ fun SettingsScreen(
                 "6. Contact Information" to "For questions or concerns, contact ProfitPath0215@gmail.com."
             ),
             onDismiss = { showTermsDialog = false }
+        )
+    }
+
+    if (showAddAssetGuideDialog) {
+        AssetGuideDialog(
+            guideSteps = assetGuideSteps,
+            onDismiss = { showAddAssetGuideDialog = false }
         )
     }
 
@@ -761,4 +802,68 @@ fun TradingStyleDialogPreview() {
             )
         }
     }
+}
+
+private val assetGuideSteps = listOf(
+    Pair(R.drawable.guide_1, "When adding a new trade entry, you need to specify the asset you traded. If the asset you need is not listed in the 'Select Asset' dropdown, you'll need to add it first."),
+    Pair(R.drawable.guide_2, "To add a new asset, open the navigation drawer (burger menu) from the top bar and select 'Manage Assets'."),
+    Pair(R.drawable.guide_3, "On the 'Manage Assets' screen, tap the '+' button in the top right corner to add a new asset."),
+    Pair(R.drawable.guide_4, "Fill in the details for the new asset: enter the 'Asset Name' (e.g., XAU/USD, AAPL) and select the 'Asset Type' from the dropdown (Forex, Crypto, or Stocks).",),
+    Pair(R.drawable.guide_5, "Tap 'Save' to add the asset. Once saved, it will appear in your list of assets and will be available in the 'Select Asset' dropdown on the Trade Entry screen.")
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AssetGuideDialog(
+    guideSteps: List<Pair<Int, String>>,
+    onDismiss: () -> Unit
+) {
+    var currentStep by remember { mutableStateOf(0) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("How to Add Assets") },
+        text = {
+            Column {
+                // Display Image
+                Image(
+                    painter = painterResource(id = guideSteps[currentStep].first),
+                    contentDescription = null, // Decorative image
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Fit // Use Fit to prevent distortion
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                // Display Text Instruction
+                Text(
+                    text = "Step ${currentStep + 1}/${guideSteps.size}: ${guideSteps[currentStep].second}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                // Navigation Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = { currentStep-- },
+                        enabled = currentStep > 0
+                    ) {
+                        Text("Previous")
+                    }
+                    Button(
+                        onClick = { currentStep++ },
+                        enabled = currentStep < guideSteps.size - 1
+                    ) {
+                        Text("Next")
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+    )
 }

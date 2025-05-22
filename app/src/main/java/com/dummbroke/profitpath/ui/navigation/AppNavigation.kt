@@ -193,7 +193,9 @@ fun MainAppScaffold(
 
     val actualShowBackButton = when (nestedCurrentRoute) {
         Screen.PerformanceSummary.route,
-        Screen.Settings.route -> mainAppNavController.previousBackStackEntry != null
+        Screen.Settings.route,
+        Screen.TradeAsset.route,
+        Screen.Airdrops.route -> mainAppNavController.previousBackStackEntry != null
         else -> false
     }
     val showBottomNav = bottomNavItems.any { it.route == nestedCurrentRoute }
@@ -287,7 +289,7 @@ fun MainAppScaffold(
             ) {
                 // Home Screen
                 composable(Screen.Home.route) {
-                    HomeScreen()
+                    HomeScreen(navController = mainAppNavController)
                 }
                 // Trade Entry Screen (new entry only)
                 composable(Screen.TradeEntry.route) {
@@ -308,8 +310,17 @@ fun MainAppScaffold(
                 composable(Screen.PerformanceSummary.route) {
                     PerformanceScreen()
                 }
-                composable(Screen.Settings.route) {
-                    SettingsScreen(settingsViewModel = settingsViewModel)
+                // Modified Settings route to include optional scrollTo argument
+                composable(
+                    route = Screen.Settings.route + "?scrollTo={scrollTo}",
+                    arguments = listOf(navArgument("scrollTo") { 
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    })
+                ) { backStackEntry ->
+                    val scrollToTarget = backStackEntry.arguments?.getString("scrollTo")
+                    SettingsScreen(settingsViewModel = settingsViewModel, scrollToTarget = scrollToTarget)
                 }
                 composable(Screen.TradeAsset.route) {
                     com.dummbroke.profitpath.ui.trade_asset.TradeAssetScreen()

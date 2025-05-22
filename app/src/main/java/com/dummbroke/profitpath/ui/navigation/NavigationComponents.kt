@@ -3,6 +3,8 @@ package com.dummbroke.profitpath.ui.navigation
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,7 +31,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -79,6 +84,10 @@ val drawerNavItems = listOf(
     Screen.TradeAsset,
     Screen.Airdrops
 )
+
+// Define referral links
+private const val BYBIT_REFERRAL_LINK = "https://www.bybit.com/invite?ref=OKP8WAZ"
+private const val EXNESS_REFERRAL_LINK = "https://one.exnesstrack.org/a/j9khljybbq"
 
 @Composable
 fun AppBottomNavigationBar(
@@ -143,6 +152,15 @@ fun AppDrawerContent(
         drawerContainerColor = MaterialTheme.colorScheme.background // Match the app background
     ) {
         Spacer(Modifier.height(24.dp)) // Increased top spacer
+
+        // Title for menu items
+        Text(
+            text = "Menu",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+        )
+
         drawerItems.forEachIndexed { index, screen ->
             Card(
                 modifier = Modifier
@@ -179,8 +197,62 @@ fun AppDrawerContent(
                 // No explicit line needed, card margins create separation
             }
         }
+        Spacer(Modifier.height(24.dp)) // Increased spacer between menu items and banners
+
+        // Title for referral banners
+        Text(
+            text = "Explore Brokers", // Or a more convincing title
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+        )
+
+        // Add Referral Banners below the menu items
+        ReferralBanners()
+
         Spacer(Modifier.height(12.dp)) // Bottom spacer
     }
+}
+
+@Composable
+fun ReferralBanners() {
+    val uriHandler = LocalUriHandler.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp), // Add padding around banners
+        horizontalAlignment = Alignment.CenterHorizontally // Center the banners
+    ) {
+        // Bybit Banner
+        ReferralBannerItem(
+            drawableResId = R.drawable.bybit_banner, // Use the drawable resource ID
+            onClick = { uriHandler.openUri(BYBIT_REFERRAL_LINK) }
+        )
+        Spacer(Modifier.height(8.dp)) // Space between banners
+
+        // Exness Banner
+        ReferralBannerItem(
+            drawableResId = R.drawable.exness_banner, // Use the drawable resource ID
+            onClick = { uriHandler.openUri(EXNESS_REFERRAL_LINK) }
+        )
+    }
+}
+
+@Composable
+fun ReferralBannerItem(
+    @DrawableRes drawableResId: Int,
+    onClick: () -> Unit
+) {
+    Image(
+        painter = painterResource(id = drawableResId),
+        contentDescription = "Referral Banner", // Generic content description, can be improved
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp) // Adjust height as needed
+            .clip(RoundedCornerShape(8.dp)) // Add rounded corners to the image
+            .clickable { onClick() } // Make the image clickable
+    )
 }
 
 // For previews to work, you'll need placeholder drawable resources in your res/drawable folder
