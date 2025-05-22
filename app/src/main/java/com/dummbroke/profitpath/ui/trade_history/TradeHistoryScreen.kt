@@ -256,7 +256,7 @@ fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistory
     }
 
     // Show latest trades at the top
-    val sortedFilteredTrades = filteredTrades.asReversed()
+    val sortedFilteredTrades = filteredTrades
 
     if (showDetailDialog && selectedTradeIdForDialog != null) {
         val trade = trades.find { it.first == selectedTradeIdForDialog }?.second

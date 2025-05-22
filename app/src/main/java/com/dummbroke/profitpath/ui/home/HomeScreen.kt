@@ -38,6 +38,11 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.activity.compose.BackHandler
+import android.widget.Toast
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 
 // --- Data Classes (Placeholders) ---
 data class UserProfile(
@@ -449,6 +454,18 @@ fun HomeScreen(
         RecentTradeItem("2", "2024-07-27", "Short ETHUSDT", false, -75.5)
     )
 ) {
+    val context = LocalContext.current
+    val backPressedTimeState = remember { mutableStateOf(0L) }
+    BackHandler {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - backPressedTimeState.value < 2000) {
+            // Exit app
+            android.os.Process.killProcess(android.os.Process.myPid())
+        } else {
+            backPressedTimeState.value = currentTime
+            Toast.makeText(context, "Press back again to exit.", Toast.LENGTH_SHORT).show()
+        }
+    }
     val userProfile = viewModel.userProfile.collectAsState().value
     val profile = UserProfile(
         name = userProfile?.name ?: "Trader Name",

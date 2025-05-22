@@ -15,6 +15,8 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 
 // Define a UI state class
 sealed interface TradeEntryUiState {
@@ -35,6 +37,9 @@ class TradeEntryViewModel(application: Application) : AndroidViewModel(applicati
 
     // --- Edit Mode Support ---
     val editTradeState = MutableStateFlow<Trade?>(null)
+
+    private val _clearFormChannel = Channel<Unit>(Channel.BUFFERED)
+    val clearFormEvent = _clearFormChannel.receiveAsFlow()
 
     // This function will be called from TradeEntryScreen.
     // It needs all the necessary parameters from the screen's state.
@@ -153,6 +158,7 @@ class TradeEntryViewModel(application: Application) : AndroidViewModel(applicati
                             repository.updateProfileBalanceWithTrade(pnlAmount)
                         }
                         _uiState.value = TradeEntryUiState.Success
+                        viewModelScope.launch { _clearFormChannel.send(Unit) }
                     },
                     onFailure = { exception ->
                         _uiState.value = TradeEntryUiState.Error(exception.message ?: "Failed to save trade.")

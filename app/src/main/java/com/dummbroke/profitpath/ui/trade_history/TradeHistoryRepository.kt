@@ -15,6 +15,7 @@ class TradeHistoryRepository(private val firestore: FirebaseFirestore) {
         val registration: ListenerRegistration = firestore.collection("users")
             .document(userId)
             .collection("trades")
+            .orderBy("entryClientTimestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(Result.failure(error)).isSuccess
