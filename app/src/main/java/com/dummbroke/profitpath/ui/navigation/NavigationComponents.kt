@@ -42,6 +42,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dummbroke.profitpath.R
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
+import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 
 // Define placeholder drawable resource names. 
 // You will need to create/rename your PNGs in res/drawable to match these.
@@ -142,6 +146,20 @@ fun AppBottomNavigationBar(
 }
 
 @Composable
+fun AdMobBanner(modifier: Modifier = Modifier) {
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            AdView(context).apply {
+                setAdSize(AdSize.BANNER)
+                adUnitId = "ca-app-pub-3940256099942544/6300978111" // Test Ad Unit ID
+                loadAd(AdRequest.Builder().build())
+            }
+        }
+    )
+}
+
+@Composable
 fun AppDrawerContent(
     drawerItems: List<Screen>,
     currentRoute: String?,
@@ -151,6 +169,13 @@ fun AppDrawerContent(
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.background // Match the app background
     ) {
+        // Banner Ad at the top
+        AdMobBanner(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        )
+        Spacer(Modifier.height(8.dp))
         Spacer(Modifier.height(24.dp)) // Increased top spacer
 
         // Title for menu items

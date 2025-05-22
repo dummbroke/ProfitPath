@@ -45,6 +45,7 @@ import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import com.dummbroke.profitpath.ui.navigation.AdMobBanner
 
 // --- Data Class for Trade History Item ---
 data class TradeHistoryItem(
@@ -280,131 +281,137 @@ fun TradeHistoryScreen(navController: NavHostController, viewModel: TradeHistory
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            SearchBar(searchQuery) { searchQuery = it }
-            Spacer(modifier = Modifier.height(8.dp))
-            // --- Filter Button and Section ---
-            Button(
-                onClick = { showFilters = !showFilters },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        Column(modifier = Modifier.fillMaxSize()) {
+            AdMobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
+            Spacer(Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp)
             ) {
-                Icon(Icons.Filled.FilterList, contentDescription = "Filter Options", tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                Spacer(Modifier.width(8.dp))
-                Text("Filter Options", color = MaterialTheme.colorScheme.onSecondaryContainer)
-            }
-            if (showFilters) {
-                Spacer(Modifier.height(12.dp))
-                androidx.compose.foundation.rememberScrollState().let { scrollState ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-                            .padding(16.dp)
-                            .verticalScroll(scrollState),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        FilterDropdown(
-                            label = "Asset Class",
-                            selectedOption = selectedAssetClass,
-                            options = assetClassOptions,
-                            onOptionSelected = { selectedAssetClass = it }
-                        )
-                        FilterDropdown(
-                            label = "Strategy",
-                            selectedOption = selectedStrategy,
-                            options = strategyOptions,
-                            onOptionSelected = { selectedStrategy = it }
-                        )
-                        FilterDropdown(
-                            label = "Outcome",
-                            selectedOption = selectedOutcome,
-                            options = outcomeOptions,
-                            onOptionSelected = { selectedOutcome = it }
-                        )
-                        FilterDropdown(
-                            label = "Market Condition",
-                            selectedOption = selectedMarketCondition,
-                            options = marketConditionOptions,
-                            onOptionSelected = { selectedMarketCondition = it }
-                        )
-                        FilterDropdown(
-                            label = "Date Range",
-                            selectedOption = selectedDateRange,
-                            options = dateRangeOptions,
-                            onOptionSelected = { selectedDateRange = it }
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Spacer(modifier = Modifier.height(16.dp))
+                SearchBar(searchQuery) { searchQuery = it }
+                Spacer(modifier = Modifier.height(8.dp))
+                // --- Filter Button and Section ---
+                Button(
+                    onClick = { showFilters = !showFilters },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Icon(Icons.Filled.FilterList, contentDescription = "Filter Options", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Filter Options", color = MaterialTheme.colorScheme.onSecondaryContainer)
+                }
+                if (showFilters) {
+                    Spacer(Modifier.height(12.dp))
+                    androidx.compose.foundation.rememberScrollState().let { scrollState ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                                .padding(16.dp)
+                                .verticalScroll(scrollState),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            OutlinedButton(
-                                onClick = {
-                                    selectedAssetClass = "All"
-                                    selectedStrategy = "All"
-                                    selectedOutcome = "All"
-                                    selectedMarketCondition = "All"
-                                    selectedDateRange = "All"
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp)
+                            FilterDropdown(
+                                label = "Asset Class",
+                                selectedOption = selectedAssetClass,
+                                options = assetClassOptions,
+                                onOptionSelected = { selectedAssetClass = it }
+                            )
+                            FilterDropdown(
+                                label = "Strategy",
+                                selectedOption = selectedStrategy,
+                                options = strategyOptions,
+                                onOptionSelected = { selectedStrategy = it }
+                            )
+                            FilterDropdown(
+                                label = "Outcome",
+                                selectedOption = selectedOutcome,
+                                options = outcomeOptions,
+                                onOptionSelected = { selectedOutcome = it }
+                            )
+                            FilterDropdown(
+                                label = "Market Condition",
+                                selectedOption = selectedMarketCondition,
+                                options = marketConditionOptions,
+                                onOptionSelected = { selectedMarketCondition = it }
+                            )
+                            FilterDropdown(
+                                label = "Date Range",
+                                selectedOption = selectedDateRange,
+                                options = dateRangeOptions,
+                                onOptionSelected = { selectedDateRange = it }
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text("Reset")
+                                OutlinedButton(
+                                    onClick = {
+                                        selectedAssetClass = "All"
+                                        selectedStrategy = "All"
+                                        selectedOutcome = "All"
+                                        selectedMarketCondition = "All"
+                                        selectedDateRange = "All"
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Reset")
+                                }
+                                Button(
+                                    onClick = { showFilters = false },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("Apply")
+                                }
                             }
-                            Button(
-                                onClick = { showFilters = false },
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(8.dp)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                when (uiState) {
+                    is TradeHistoryUiState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                            Text("Loading trades...", modifier = Modifier.padding(top = 60.dp))
+                        }
+                    }
+                    is TradeHistoryUiState.Error -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text((uiState as TradeHistoryUiState.Error).message, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    is TradeHistoryUiState.Success -> {
+                        if (filteredTrades.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text("Apply")
+                                Text("No trades match your criteria.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        } else {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(filteredTrades, key = { it.first }) { (tradeId, trade) ->
+                                    TradeCard(tradeId = tradeId, trade = trade, onClick = {
+                                        selectedTradeIdForDialog = tradeId
+                                        showDetailDialog = true
+                                    })
+                                }
                             }
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            when (uiState) {
-                is TradeHistoryUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                        Text("Loading trades...", modifier = Modifier.padding(top = 60.dp))
-                    }
-                }
-                is TradeHistoryUiState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text((uiState as TradeHistoryUiState.Error).message, color = MaterialTheme.colorScheme.error)
-                    }
-                }
-                is TradeHistoryUiState.Success -> {
-                    if (filteredTrades.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("No trades match your criteria.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    } else {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(filteredTrades, key = { it.first }) { (tradeId, trade) ->
-                                TradeCard(tradeId = tradeId, trade = trade, onClick = {
-                                    selectedTradeIdForDialog = tradeId
-                                    showDetailDialog = true
-                                })
-                            }
-                        }
-                    }
-                }
-            }
+            Spacer(Modifier.height(8.dp))
+            AdMobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
         }
     }
 }

@@ -13,6 +13,7 @@ import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
+import com.google.android.gms.ads.MobileAds
 
 class MainActivity : ComponentActivity() {
 
@@ -21,6 +22,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        MobileAds.initialize(this) {}
         // enableEdgeToEdge() // Often handled differently or implicitly in Compose
         setContent { // Use setContent for Compose
             // Observe the dark mode state from the ViewModel

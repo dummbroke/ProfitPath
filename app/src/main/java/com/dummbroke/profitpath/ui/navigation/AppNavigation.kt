@@ -180,24 +180,27 @@ fun MainAppScaffold(
     val nestedCurrentRoute = nestedNavBackStackEntry?.destination?.route
 
     // Recalculate title and back button based on the nested navigation state
-    val actualCurrentScreenTitle = when (nestedCurrentRoute) {
-        Screen.Home.route -> Screen.Home.title
-        Screen.TradeEntry.route -> Screen.TradeEntry.title
-        Screen.TradeHistory.route -> Screen.TradeHistory.title
-        Screen.PerformanceSummary.route -> Screen.PerformanceSummary.title
-        Screen.Settings.route -> Screen.Settings.title
-        Screen.TradeAsset.route -> "Manage Assets"
-        Screen.Airdrops.route -> "Airdrops"
+    val actualCurrentScreenTitle = when {
+        nestedCurrentRoute == null -> "ProfitPath"
+        nestedCurrentRoute == Screen.Home.route -> Screen.Home.title
+        nestedCurrentRoute == Screen.TradeEntry.route -> Screen.TradeEntry.title
+        nestedCurrentRoute == Screen.TradeHistory.route -> Screen.TradeHistory.title
+        nestedCurrentRoute == Screen.PerformanceSummary.route -> Screen.PerformanceSummary.title
+        nestedCurrentRoute.startsWith(Screen.Settings.route) -> Screen.Settings.title
+        nestedCurrentRoute == Screen.TradeAsset.route -> "Manage Assets"
+        nestedCurrentRoute == Screen.Airdrops.route -> "Airdrops"
         else -> "ProfitPath"
     }
 
-    val actualShowBackButton = when (nestedCurrentRoute) {
-        Screen.PerformanceSummary.route,
-        Screen.Settings.route,
-        Screen.TradeAsset.route,
-        Screen.Airdrops.route -> mainAppNavController.previousBackStackEntry != null
+    val actualShowBackButton = when {
+        nestedCurrentRoute == null -> false
+        nestedCurrentRoute == Screen.PerformanceSummary.route -> mainAppNavController.previousBackStackEntry != null
+        nestedCurrentRoute.startsWith(Screen.Settings.route) -> mainAppNavController.previousBackStackEntry != null
+        nestedCurrentRoute == Screen.TradeAsset.route -> mainAppNavController.previousBackStackEntry != null
+        nestedCurrentRoute == Screen.Airdrops.route -> mainAppNavController.previousBackStackEntry != null
         else -> false
     }
+
     val showBottomNav = bottomNavItems.any { it.route == nestedCurrentRoute }
 
     ModalNavigationDrawer(

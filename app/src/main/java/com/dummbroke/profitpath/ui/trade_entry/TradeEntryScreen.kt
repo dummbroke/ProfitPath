@@ -54,6 +54,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.material3.Checkbox
 import java.util.concurrent.TimeUnit
+import com.dummbroke.profitpath.ui.navigation.AdMobBanner
 
 private const val PREFS_NAME = "TradeEntryGuidePrefs"
 private const val KEY_LAST_SHOWN_DATE = "last_shown_date"
@@ -284,151 +285,157 @@ fun TradeEntryScreen(
     }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                ScreenshotUploadSection(imageToShow, onUploadClick = ::handleImageUploadClick)
-            }
+        Column(modifier = Modifier.fillMaxSize()) {
+            AdMobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
+            Spacer(Modifier.height(8.dp))
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    ScreenshotUploadSection(imageToShow, onUploadClick = ::handleImageUploadClick)
+                }
 
-            item { SectionTitle("Trade Setup") }
-            item { AssetClassSelector(selectedAssetClass, listOf("Forex", "Stocks", "Crypto")) { selectedAssetClass = it } }
-            item {
-                SpecificAssetSelector(
-                    assetClass = selectedAssetClass,
-                    currentValue = specificAsset,
-                    userAssets = userAssets,
-                    onValueChange = { specificAsset = it }
-                )
-            }
-            item { StrategySelector(strategy, strategyOptions) { strategy = it } }
-            item { MarketConditionSelector(selectedMarketCondition, listOf("Bullish Trend", "Bearish Trend", "Ranging", "High Volatility", "Low Volatility", "News Event")) { selectedMarketCondition = it } }
-            item { PositionTypeToggle(isLong) { isLong = it } }
+                item { SectionTitle("Trade Setup") }
+                item { AssetClassSelector(selectedAssetClass, listOf("Forex", "Stocks", "Crypto")) { selectedAssetClass = it } }
+                item {
+                    SpecificAssetSelector(
+                        assetClass = selectedAssetClass,
+                        currentValue = specificAsset,
+                        userAssets = userAssets,
+                        onValueChange = { specificAsset = it }
+                    )
+                }
+                item { StrategySelector(strategy, strategyOptions) { strategy = it } }
+                item { MarketConditionSelector(selectedMarketCondition, listOf("Bullish Trend", "Bearish Trend", "Ranging", "High Volatility", "Low Volatility", "News Event")) { selectedMarketCondition = it } }
+                item { PositionTypeToggle(isLong) { isLong = it } }
 
-            item { SectionTitle("Price Levels") }
-            item { PriceInputTextField(label = "Entry Price", value = entryPrice, onValueChange = { entryPrice = it }) }
-            item { PriceInputTextField(label = "Stop-Loss Price", value = stopLossPrice, onValueChange = { stopLossPrice = it }) }
-            item { PriceInputTextField(label = "Take-Profit Price (Optional)", value = takeProfitPrice, onValueChange = { takeProfitPrice = it }, imeAction = ImeAction.Next) }
+                item { SectionTitle("Price Levels") }
+                item { PriceInputTextField(label = "Entry Price", value = entryPrice, onValueChange = { entryPrice = it }) }
+                item { PriceInputTextField(label = "Stop-Loss Price", value = stopLossPrice, onValueChange = { stopLossPrice = it }) }
+                item { PriceInputTextField(label = "Take-Profit Price (Optional)", value = takeProfitPrice, onValueChange = { takeProfitPrice = it }, imeAction = ImeAction.Next) }
 
-            item { SectionTitle("Outcome & Notes") }
-            item { WinLossToggle(isWin) { isWin = it } }
-            item { PriceInputTextField(
-                label = "P&L Amount (e.g., 50.75 or -20.10)",
-                value = pnlAmountStr,
-                onValueChange = {pnlAmountStr = it},
-                imeAction = ImeAction.Next,
-                placeholder = "(Optional, for shadow trades)"
-            ) }
-            item { DatePickerField(tradeDate) { showDatePickerDialog = true } }
+                item { SectionTitle("Outcome & Notes") }
+                item { WinLossToggle(isWin) { isWin = it } }
+                item { PriceInputTextField(
+                    label = "P&L Amount (e.g., 50.75 or -20.10)",
+                    value = pnlAmountStr,
+                    onValueChange = {pnlAmountStr = it},
+                    imeAction = ImeAction.Next,
+                    placeholder = "(Optional, for shadow trades)"
+                ) }
+                item { DatePickerField(tradeDate) { showDatePickerDialog = true } }
 
-            item { PriceInputTextField(
-                label = "Entry Amount (USD)",
-                value = entryAmountUSDStr,
-                onValueChange = { entryAmountUSDStr = it },
-                keyboardType = KeyboardType.Decimal,
-                imeAction = ImeAction.Next,
-                placeholder = "(Optional, for shadow trades)"
-            ) }
-            
-            item { MultiLineTextField(label = "Pre-Trade Rationale / Setup", value = preTradeRationale, onValueChange = { preTradeRationale = it }) }
-            item { MultiLineTextField(label = "Execution Notes", value = executionNotes, onValueChange = { executionNotes = it }) }
-            item { MultiLineTextField(label = "Post-Trade Review / Lessons Learned", value = postTradeReview, onValueChange = { postTradeReview = it }) }
-            
-            item { OutlinedTextField(
-                value = tags,
-                onValueChange = { tags = it },
-                label = { Text("Tags (comma-separated)") },
-                placeholder = { Text("e.g., FOMO, NewsPlay, GoodDiscipline") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                )
-            )}
+                item { PriceInputTextField(
+                    label = "Entry Amount (USD)",
+                    value = entryAmountUSDStr,
+                    onValueChange = { entryAmountUSDStr = it },
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Next,
+                    placeholder = "(Optional, for shadow trades)"
+                ) }
+                
+                item { MultiLineTextField(label = "Pre-Trade Rationale / Setup", value = preTradeRationale, onValueChange = { preTradeRationale = it }) }
+                item { MultiLineTextField(label = "Execution Notes", value = executionNotes, onValueChange = { executionNotes = it }) }
+                item { MultiLineTextField(label = "Post-Trade Review / Lessons Learned", value = postTradeReview, onValueChange = { postTradeReview = it }) }
+                
+                item { OutlinedTextField(
+                    value = tags,
+                    onValueChange = { tags = it },
+                    label = { Text("Tags (comma-separated)") },
+                    placeholder = { Text("e.g., FOMO, NewsPlay, GoodDiscipline") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )}
 
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                if (tradeId != null) {
-                    Button(
-                        onClick = {
-                            tradeEntryViewModel.updateTradeEntry(
-                                tradeId = tradeId,
-                                assetClass = selectedAssetClass,
-                                specificAsset = specificAsset,
-                                strategyUsed = strategy,
-                                marketCondition = selectedMarketCondition,
-                                positionType = if (isLong) "Long" else "Short",
-                                entryPriceStr = entryPrice.text,
-                                stopLossPriceStr = stopLossPrice.text,
-                                takeProfitPriceStr = takeProfitPrice.text,
-                                outcome = if (isWin) "Win" else "Loss",
-                                tradeDateStr = tradeDate,
-                                pnlAmountStr = pnlAmountStr.text,
-                                preTradeRationale = preTradeRationale.text,
-                                executionNotes = executionNotes.text,
-                                postTradeReview = postTradeReview.text,
-                                tagsStr = tags.text,
-                                selectedImageUri = selectedImageUri,
-                                entryAmountUSDStr = entryAmountUSDStr.text
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        enabled = uiState !is TradeEntryUiState.Loading
-                    ) {
-                        if (uiState is TradeEntryUiState.Loading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                        } else {
-                            Text("Update", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (tradeId != null) {
+                        Button(
+                            onClick = {
+                                tradeEntryViewModel.updateTradeEntry(
+                                    tradeId = tradeId,
+                                    assetClass = selectedAssetClass,
+                                    specificAsset = specificAsset,
+                                    strategyUsed = strategy,
+                                    marketCondition = selectedMarketCondition,
+                                    positionType = if (isLong) "Long" else "Short",
+                                    entryPriceStr = entryPrice.text,
+                                    stopLossPriceStr = stopLossPrice.text,
+                                    takeProfitPriceStr = takeProfitPrice.text,
+                                    outcome = if (isWin) "Win" else "Loss",
+                                    tradeDateStr = tradeDate,
+                                    pnlAmountStr = pnlAmountStr.text,
+                                    preTradeRationale = preTradeRationale.text,
+                                    executionNotes = executionNotes.text,
+                                    postTradeReview = postTradeReview.text,
+                                    tagsStr = tags.text,
+                                    selectedImageUri = selectedImageUri,
+                                    entryAmountUSDStr = entryAmountUSDStr.text
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = uiState !is TradeEntryUiState.Loading
+                        ) {
+                            if (uiState is TradeEntryUiState.Loading) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                            } else {
+                                Text("Update", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
+                            }
                         }
-                    }
-                } else {
-                    Button(
-                        onClick = {
-                            tradeEntryViewModel.saveTradeEntry(
-                                assetClass = selectedAssetClass,
-                                specificAsset = specificAsset,
-                                strategyUsed = strategy,
-                                marketCondition = selectedMarketCondition,
-                                positionType = if (isLong) "Long" else "Short",
-                                entryPriceStr = entryPrice.text,
-                                stopLossPriceStr = stopLossPrice.text,
-                                takeProfitPriceStr = takeProfitPrice.text,
-                                outcome = if (isWin) "Win" else "Loss",
-                                tradeDateStr = tradeDate,
-                                pnlAmountStr = pnlAmountStr.text,
-                                preTradeRationale = preTradeRationale.text,
-                                executionNotes = executionNotes.text,
-                                postTradeReview = postTradeReview.text,
-                                tagsStr = tags.text,
-                                selectedImageUri = selectedImageUri,
-                                entryAmountUSDStr = entryAmountUSDStr.text
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        enabled = uiState !is TradeEntryUiState.Loading
-                    ) {
-                        if (uiState is TradeEntryUiState.Loading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                        } else {
-                            Text("Save Trade", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        Button(
+                            onClick = {
+                                tradeEntryViewModel.saveTradeEntry(
+                                    assetClass = selectedAssetClass,
+                                    specificAsset = specificAsset,
+                                    strategyUsed = strategy,
+                                    marketCondition = selectedMarketCondition,
+                                    positionType = if (isLong) "Long" else "Short",
+                                    entryPriceStr = entryPrice.text,
+                                    stopLossPriceStr = stopLossPrice.text,
+                                    takeProfitPriceStr = takeProfitPrice.text,
+                                    outcome = if (isWin) "Win" else "Loss",
+                                    tradeDateStr = tradeDate,
+                                    pnlAmountStr = pnlAmountStr.text,
+                                    preTradeRationale = preTradeRationale.text,
+                                    executionNotes = executionNotes.text,
+                                    postTradeReview = postTradeReview.text,
+                                    tagsStr = tags.text,
+                                    selectedImageUri = selectedImageUri,
+                                    entryAmountUSDStr = entryAmountUSDStr.text
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            enabled = uiState !is TradeEntryUiState.Loading
+                        ) {
+                            if (uiState is TradeEntryUiState.Loading) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                            } else {
+                                Text("Save Trade", fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
+                            }
                         }
                     }
                 }
             }
+            Spacer(Modifier.height(8.dp))
+            AdMobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
         }
 
         // --- Guide Dialog ---

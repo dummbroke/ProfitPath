@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.dummbroke.profitpath.ui.theme.ProfitPathTheme
 import java.text.DecimalFormat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dummbroke.profitpath.ui.navigation.AdMobBanner
 
 // --- Data Classes for Performance Metrics ---
 data class PerformanceOverview(
@@ -121,52 +122,58 @@ fun PerformanceScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
     ) { paddingValues ->
-        when (uiState) {
-            is PerformanceUiState.Loading -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+        Column(modifier = Modifier.fillMaxSize()) {
+            AdMobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
+            Spacer(Modifier.height(8.dp))
+            when (uiState) {
+                is PerformanceUiState.Loading -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-            }
-            is PerformanceUiState.Error -> {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = (uiState as PerformanceUiState.Error).message,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            is PerformanceUiState.Success -> {
-                val performanceData = (uiState as PerformanceUiState.Success).overview
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        PerformanceFiltersAndExport(
-                            selectedDateRange = dateRangeOptions.firstOrNull { it.second == selectedDateRange }?.first ?: "Overall",
-                            dateRangeOptions = dateRangeOptions.map { it.first },
-                            onDateRangeSelected = { label ->
-                                val range = dateRangeOptions.firstOrNull { it.first == label }?.second ?: DateRange.Overall
-                                performanceViewModel.updateDateRange(range)
-                            },
-                            selectedStrategyFilter = selectedStrategy,
-                            strategyFilterOptions = strategyFilterOptions,
-                            onStrategyFilterSelected = { performanceViewModel.updateStrategy(it) },
-                            onExportClick = { /* TODO: Implement Export */ }
+                is PerformanceUiState.Error -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = (uiState as PerformanceUiState.Error).message,
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
-                    item { BalanceAndPnlOverviewCard(performanceData) }
-                    item { KeyStatsGrid(performanceData) }
-                    item { AverageMetricsCard(performanceData) }
-                    item { StreaksAndDrawdownCard(performanceData) }
-                    // TODO: Add monthly summary, strategy performance, and other analytics using real data
-                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                }
+                is PerformanceUiState.Success -> {
+                    val performanceData = (uiState as PerformanceUiState.Success).overview
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            PerformanceFiltersAndExport(
+                                selectedDateRange = dateRangeOptions.firstOrNull { it.second == selectedDateRange }?.first ?: "Overall",
+                                dateRangeOptions = dateRangeOptions.map { it.first },
+                                onDateRangeSelected = { label ->
+                                    val range = dateRangeOptions.firstOrNull { it.first == label }?.second ?: DateRange.Overall
+                                    performanceViewModel.updateDateRange(range)
+                                },
+                                selectedStrategyFilter = selectedStrategy,
+                                strategyFilterOptions = strategyFilterOptions,
+                                onStrategyFilterSelected = { performanceViewModel.updateStrategy(it) },
+                                onExportClick = { /* TODO: Implement Export */ }
+                            )
+                        }
+                        item { BalanceAndPnlOverviewCard(performanceData) }
+                        item { KeyStatsGrid(performanceData) }
+                        item { AverageMetricsCard(performanceData) }
+                        item { StreaksAndDrawdownCard(performanceData) }
+                        // TODO: Add monthly summary, strategy performance, and other analytics using real data
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }
                 }
             }
+            Spacer(Modifier.height(8.dp))
+            AdMobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
         }
     }
 }

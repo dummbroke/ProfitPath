@@ -72,6 +72,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.gestures.ScrollableState
+import com.dummbroke.profitpath.ui.navigation.AdMobBanner
 
 // --- Data Models (if needed, for complex settings) ---
 data class TradingStyleOption(val id: String, val displayName: String)
@@ -164,96 +165,102 @@ fun SettingsScreen(
         }
     }
 
-    LazyColumn(
-        state = listState, // Assign the state to LazyColumn
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = 16.dp) // Padding at the very bottom of the list
-    ) {
-        // Account Management Section
-        item {
-            SettingsSectionTitle("Account Management")
-            SettingItem(
-                iconRes = R.drawable.ic_settings_person_placeholder,
-                title = "Logged in as",
-                subtitle = userEmail
-            )
-            SettingItem(iconRes = R.drawable.ic_settings_lock_reset_placeholder, title = "Change Password", isClickable = true, onClick = { settingsViewModel.onChangePasswordClicked() }) {}
-            SettingItem(
-                iconRes = R.drawable.ic_settings_logout_placeholder,
-                title = "Logout",
-                isClickable = true,
-                onClick = { settingsViewModel.onLogoutClicked() }
-            ) {}
-            SettingItem(iconRes = R.drawable.ic_settings_delete_forever_placeholder, title = "Delete Account", titleColor = MaterialTheme.colorScheme.error, isClickable = true, onClick = { showDeleteAccountDialog = true }) {}
-        }
+    Column {
+        AdMobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
+        Spacer(Modifier.height(8.dp))
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 16.dp)
+        ) {
+            // Account Management Section
+            item {
+                SettingsSectionTitle("Account Management")
+                SettingItem(
+                    iconRes = R.drawable.ic_settings_person_placeholder,
+                    title = "Logged in as",
+                    subtitle = userEmail
+                )
+                SettingItem(iconRes = R.drawable.ic_settings_lock_reset_placeholder, title = "Change Password", isClickable = true, onClick = { settingsViewModel.onChangePasswordClicked() }) {}
+                SettingItem(
+                    iconRes = R.drawable.ic_settings_logout_placeholder,
+                    title = "Logout",
+                    isClickable = true,
+                    onClick = { settingsViewModel.onLogoutClicked() }
+                ) {}
+                SettingItem(iconRes = R.drawable.ic_settings_delete_forever_placeholder, title = "Delete Account", titleColor = MaterialTheme.colorScheme.error, isClickable = true, onClick = { showDeleteAccountDialog = true }) {}
+            }
 
-        // Profile Customization Section
-        item {
-            SettingsSectionTitle("Profile Customization")
-            EditableSettingItem(
-                title = "Trader Name",
-                value = localTraderName,
-                onValueChange = { localTraderName = it },
-                onSave = {
-                    settingsViewModel.updateTraderName(localTraderName.text)
-                    focusManager.clearFocus()
-                },
-                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done)
-            )
-            SettingItem(
-                iconRes = R.drawable.ic_settings_profile_style_placeholder,
-                title = "Preferred Trading Style",
-                subtitle = tradingStyles.find { it.id == tradingStyle }?.displayName ?: "Select Style",
-                isClickable = true,
-                onClick = { showTradingStyleDialog = true }
-            )
-        }
+            // Profile Customization Section
+            item {
+                SettingsSectionTitle("Profile Customization")
+                EditableSettingItem(
+                    title = "Trader Name",
+                    value = localTraderName,
+                    onValueChange = { localTraderName = it },
+                    onSave = {
+                        settingsViewModel.updateTraderName(localTraderName.text)
+                        focusManager.clearFocus()
+                    },
+                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done)
+                )
+                SettingItem(
+                    iconRes = R.drawable.ic_settings_profile_style_placeholder,
+                    title = "Preferred Trading Style",
+                    subtitle = tradingStyles.find { it.id == tradingStyle }?.displayName ?: "Select Style",
+                    isClickable = true,
+                    onClick = { showTradingStyleDialog = true }
+                )
+            }
 
-        // Appearance & Display Section
-        item {
-            SettingsSectionTitle("Appearance & Display")
-            SwitchSettingItem(
-                iconRes = R.drawable.ic_settings_theme_mode_placeholder,
-                title = "Dark Mode",
-                checked = isDarkMode,
-                onCheckedChange = { settingsViewModel.toggleTheme(it) }
-            )
-        }
+            // Appearance & Display Section
+            item {
+                SettingsSectionTitle("Appearance & Display")
+                SwitchSettingItem(
+                    iconRes = R.drawable.ic_settings_theme_mode_placeholder,
+                    title = "Dark Mode",
+                    checked = isDarkMode,
+                    onCheckedChange = { settingsViewModel.toggleTheme(it) }
+                )
+            }
 
-        // Data & Sync Management Section
-        item(key = SCROLL_TARGET_BALANCE) { // Assign key to the balance item
-            SettingsSectionTitle("Data & Sync Management")
-            EditableSettingItem(
-                title = "Current Account Balance (USD)",
-                value = localCurrentBalance,
-                onValueChange = { localCurrentBalance = it },
-                keyboardType = KeyboardType.Number,
-                onSave = { 
-                    val balanceValue = localCurrentBalance.text.toDoubleOrNull() ?: 0.0
-                    settingsViewModel.updateCurrentBalance(balanceValue)
-                    focusManager.clearFocus()
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
-            )
-            SettingItem(iconRes = R.drawable.ic_settings_cloud_sync_placeholder, title = "Cloud Sync Status", subtitle = cloudSyncStatus)
-        }
+            // Data & Sync Management Section
+            item(key = SCROLL_TARGET_BALANCE) { // Assign key to the balance item
+                SettingsSectionTitle("Data & Sync Management")
+                EditableSettingItem(
+                    title = "Current Account Balance (USD)",
+                    value = localCurrentBalance,
+                    onValueChange = { localCurrentBalance = it },
+                    keyboardType = KeyboardType.Number,
+                    onSave = { 
+                        val balanceValue = localCurrentBalance.text.toDoubleOrNull() ?: 0.0
+                        settingsViewModel.updateCurrentBalance(balanceValue)
+                        focusManager.clearFocus()
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
+                )
+                SettingItem(iconRes = R.drawable.ic_settings_cloud_sync_placeholder, title = "Cloud Sync Status", subtitle = cloudSyncStatus)
+            }
 
-        // Application Information & Support Section
-        item {
-            SettingsSectionTitle("Application Information & Support")
-            SettingItem(iconRes = R.drawable.ic_settings_app_info_placeholder, title = "App Version", subtitle = appVersion)
-            SettingItem(
-                iconRes = R.drawable.ic_settings_help_placeholder,
-                title = "How to Add Assets",
-                isClickable = true,
-                onClick = { showAddAssetGuideDialog = true }
-            ) {}
-            SettingItem(iconRes = R.drawable.ic_settings_privacy_policy_placeholder, title = "Privacy Policy", isClickable = true, onClick = { showPrivacyPolicyDialog = true }) {}
-            SettingItem(iconRes = R.drawable.ic_settings_terms_service_placeholder, title = "Terms of Service", isClickable = true, onClick = { showTermsDialog = true }) {}
-            SettingItem(iconRes = R.drawable.ic_settings_send_feedback_placeholder, title = "Send Feedback", isClickable = true, onClick = { /* TODO: Open Email/Form */ }) {}
-            SettingItem(iconRes = R.drawable.ic_settings_rate_app_placeholder, title = "Rate App", isClickable = true, onClick = { /* TODO: Open Play Store */ }) {}
+            // Application Information & Support Section
+            item {
+                SettingsSectionTitle("Application Information & Support")
+                SettingItem(iconRes = R.drawable.ic_settings_app_info_placeholder, title = "App Version", subtitle = appVersion)
+                SettingItem(
+                    iconRes = R.drawable.ic_settings_help_placeholder,
+                    title = "How to Add Assets",
+                    isClickable = true,
+                    onClick = { showAddAssetGuideDialog = true }
+                ) {}
+                SettingItem(iconRes = R.drawable.ic_settings_privacy_policy_placeholder, title = "Privacy Policy", isClickable = true, onClick = { showPrivacyPolicyDialog = true }) {}
+                SettingItem(iconRes = R.drawable.ic_settings_terms_service_placeholder, title = "Terms of Service", isClickable = true, onClick = { showTermsDialog = true }) {}
+                SettingItem(iconRes = R.drawable.ic_settings_send_feedback_placeholder, title = "Send Feedback", isClickable = true, onClick = { /* TODO: Open Email/Form */ }) {}
+                SettingItem(iconRes = R.drawable.ic_settings_rate_app_placeholder, title = "Rate App", isClickable = true, onClick = { /* TODO: Open Play Store */ }) {}
+            }
         }
+        Spacer(Modifier.height(8.dp))
+        AdMobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
     }
 
     if (showLogoutConfirmDialog) {
