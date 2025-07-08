@@ -48,8 +48,6 @@ Each feature folder contains:
 - **Material Design 3**
 - **Timber (logging)**
 
-## Contribution
-Pull requests are welcome! Please follow Kotlin and Android best practices, and ensure all code is well-documented and tested.
 
 ## License
 This project is licensed under the MIT License. 
