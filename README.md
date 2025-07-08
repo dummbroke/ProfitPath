@@ -40,20 +40,6 @@ Each feature folder contains:
 - `ViewModel.kt` (State & logic)
 - `Repository.kt` (Data access)
 
-## Setup Instructions
-
-1. **Clone the repository:**
-   ```sh
-   git clone <your-repo-url>
-   ```
-2. **Open in Android Studio.**
-3. **Sync Gradle:**
-   - Ensure all dependencies are downloaded.
-4. **Firebase Setup:**
-   - Add your `google-services.json` to `app/`.
-   - Configure your Firebase project for Firestore.
-5. **Run the app on an emulator or device.**
-
 ## Tech Stack
 - **Kotlin**
 - **Jetpack Compose**
